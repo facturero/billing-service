@@ -1,0 +1,38 @@
+{
+  "name": "billing-service",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "npm run db:migrate && tsx watch src/main.ts",
+    "build": "tsc",
+    "start": "node dist/main.js",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit",
+    "db:migrate": "npx sequelize-cli db:migrate",
+    "db:migrate:undo": "npx sequelize-cli db:migrate:undo",
+    "db:seed": "npx sequelize-cli db:seed:all"
+  },
+  "dependencies": {
+    "@hono/node-server": "^1.13.0",
+    "@hono/zod-validator": "^0.4.0",
+    "amqplib": "^0.10.4",
+    "dinero.js": "^2.0.0-alpha.14",
+    "dotenv": "^16.4.7",
+    "hono": "^4.6.0",
+    "jose": "^5.9.0",
+    "mysql2": "^3.11.0",
+    "pdfkit": "^0.15.0",
+    "sequelize": "^6.37.0",
+    "zod": "^3.23.0"
+  },
+  "devDependencies": {
+    "@types/amqplib": "^0.10.4",
+    "@types/node": "^22.0.0",
+    "@types/pdfkit": "^0.13.9",
+    "sequelize-cli": "^6.6.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0",
+    "vitest": "^2.1.0"
+  }
+}
