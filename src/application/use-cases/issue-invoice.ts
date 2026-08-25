@@ -29,6 +29,7 @@ export class IssueInvoiceUseCase {
 
     if (!org) throw new BadRequestError('El perfil fiscal de la organización no está completo');
     if (!establishment) throw new EstablishmentNotFoundError();
+    if (establishment.status !== 'active') throw new EstablishmentNotFoundError();
     if (!emissionPoint) throw new EmissionPointNotFoundError();
     if (emissionPoint.status !== 'active') throw new EmissionPointInactiveError();
 
