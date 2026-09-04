@@ -16,7 +16,7 @@ import { RemoveLineUseCase } from './application/use-cases/remove-line.js';
 import { IssueInvoiceUseCase } from './application/use-cases/issue-invoice.js';
 import { VoidInvoiceUseCase } from './application/use-cases/void-invoice.js';
 import { createApp } from './interface/http/app.js';
-import { OutboxRelay } from './infrastructure/messaging/relay.js';
+import { OutboxRelay } from '@facturero/outbox-relay';
 import { startConsumers } from './infrastructure/messaging/consumer.js';
 
 async function main(): Promise<void> {
@@ -64,8 +64,12 @@ async function main(): Promise<void> {
 
   // Outbox Relay
   if (config.RABBITMQ_URL) {
-    const relay = new OutboxRelay();
-    await relay.start(config.RABBITMQ_URL);
+    const relay = new OutboxRelay({
+      sequelize,
+      rabbitmqUrl: config.RABBITMQ_URL,
+      exchange: 'crm.events',
+    });
+    await relay.start();
     console.log('[billing-service] OutboxRelay iniciado.');
   } else {
     console.log('[billing-service] RABBITMQ_URL no configurado, outbox relay desactivado.');

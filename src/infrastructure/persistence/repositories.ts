@@ -1,4 +1,4 @@
-import { Op } from 'sequelize';
+import { Op, Transaction } from 'sequelize';
 import { randomUUID } from 'node:crypto';
 import { Invoice, InvoiceLine, LineTax, InvoiceTaxTotal, Sequence } from '../../domain/entities.js';
 import { InvoiceRepository, InvoiceLineRepository, LineTaxRepository, InvoiceTaxTotalRepository, SequenceRepository, OutboxRepository } from '../../domain/repositories.js';
@@ -273,6 +273,8 @@ export class SequelizeSequenceRepository implements SequenceRepository {
 // ── Outbox Repository ──────────────────────────────────────────────────────
 
 export class SequelizeOutboxRepository implements OutboxRepository {
+  constructor(private readonly tx?: Transaction) {}
+
   async add(entry: {
     eventId: string;
     organizationId: string;
@@ -282,15 +284,18 @@ export class SequelizeOutboxRepository implements OutboxRepository {
     payload: unknown;
     occurredAt: Date;
   }): Promise<void> {
-    await OutboxModel.create({
-      id: entry.eventId,
-      aggregate_type: entry.aggregateType,
-      aggregate_id: entry.aggregateId,
-      type: entry.type,
-      payload: entry.payload as any,
-      occurred_at: entry.occurredAt,
-      processed_at: null,
-    });
+    await OutboxModel.create(
+      {
+        id: entry.eventId,
+        aggregate_type: entry.aggregateType,
+        aggregate_id: entry.aggregateId,
+        type: entry.type,
+        payload: entry.payload as any,
+        occurred_at: entry.occurredAt,
+        processed_at: null,
+      },
+      { transaction: this.tx },
+    );
   }
 }
 
@@ -307,7 +312,7 @@ export class SequelizeUnitOfWork implements UnitOfWork {
           lineTaxes: new SequelizeLineTaxRepository(),
           invoiceTaxTotals: new SequelizeInvoiceTaxTotalRepository(),
           sequences: new SequelizeSequenceRepository(),
-          outbox: new SequelizeOutboxRepository(),
+          outbox: new SequelizeOutboxRepository(transaction),
         },
       });
       await transaction.commit();
