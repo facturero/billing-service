@@ -32,6 +32,12 @@ export interface InvoiceTaxTotalRepository {
 export interface SequenceRepository {
   findByOrganizationAndPoint(organizationId: string, emissionPointId: string, documentTypeId: string): Promise<Sequence | null>;
   findById(id: string): Promise<Sequence | null>;
+  /**
+   * Inserta la serie solo si no existe todavía (INSERT ... IGNORE). Bajo
+   * concurrencia la perderá la primera emisión simultánea: no lanza error,
+   * y el caller debe volver a leer con lock para serializarse sobre la fila.
+   */
+  createIfAbsent(sequence: Sequence): Promise<void>;
   save(sequence: Sequence): Promise<void>;
 }
 

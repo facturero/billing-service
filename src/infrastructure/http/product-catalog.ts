@@ -1,4 +1,5 @@
 import type { ProductCatalogInfo, ProductCatalogPort } from '../../application/ports.js';
+import { ProductCatalogError } from '../../domain/errors.js';
 
 /**
  * billing-service llama a product-service directo (server-to-server, sin pasar
@@ -12,8 +13,9 @@ export class HttpProductCatalog implements ProductCatalogPort {
     console.log(`[billing][product-catalog] findById(organizationId=${organizationId}, productId=${productId}) baseUrl=${this.baseUrl}`);
 
     if (!this.baseUrl) {
-      console.warn('[billing][product-catalog] PRODUCT_SERVICE_URL no configurada (baseUrl vacío)');
-      return null;
+      // Sin URL de catálogo no hay cómo saber si el producto existe. Fallar
+      // explícito en vez de dejar la línea sin impuestos (TEST-PLAN.md #2).
+      throw new ProductCatalogError();
     }
 
     try {
@@ -31,7 +33,7 @@ export class HttpProductCatalog implements ProductCatalogPort {
       if (!res.ok) {
         const body = await res.text().catch(() => '<no se pudo leer el body>');
         console.warn(`[billing][product-catalog] product-service respondió ${res.status} al consultar el producto ${productId}. Body: ${body}`);
-        return null;
+        throw new ProductCatalogError();
       }
 
       const data = await res.json() as {
@@ -56,8 +58,9 @@ export class HttpProductCatalog implements ProductCatalogPort {
       console.log(`[billing][product-catalog] resultado mapeado:`, JSON.stringify(result));
       return result;
     } catch (err) {
+      // Incluye red caída y JSON inválido. Distinguir del 404 que NO entra aquí.
       console.warn('[billing][product-catalog] No se pudo contactar a product-service:', err);
-      return null;
+      throw new ProductCatalogError();
     }
   }
 }

@@ -1,5 +1,4 @@
 import { createMiddleware } from 'hono/factory';
-import type { Context } from 'hono';
 import { UnauthorizedError } from '../../domain/errors.js';
 
 export interface ContextVariables {
@@ -34,20 +33,4 @@ export function requirePermission(permission: string) {
     }
     await next();
   });
-}
-
-export function errorHandler() {
-  return async (c: Context, next: () => Promise<void>) => {
-    try {
-      await next();
-    } catch (err: any) {
-      const status = err.statusCode || 500;
-      const code = err.name || 'InternalError';
-      const message = err.message || 'Error interno del servidor';
-      if (status === 500) {
-        console.error('[billing] Error:', err);
-      }
-      return c.json({ code, message, details: err.details || null }, status);
-    }
-  };
 }

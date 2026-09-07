@@ -16,10 +16,15 @@ export interface ProductCatalogInfo {
 
 /**
  * Consulta product-service para armar el `productSnapshot` de una línea de
- * factura (nombre, SKU) y sus impuestos asignados. Best-effort: si el
- * servicio no responde, `findById` devuelve `null` y el caller decide el
- * fallback (no debe romper el flujo de agregar una línea por un problema de
- * red puntual).
+ * factura (nombre, SKU) y sus impuestos asignados.
+ *
+ * Contrato:
+ * - `null` ⇔ el producto NO existe (404). El caller responde 400.
+ * - Lanza `ProductCatalogError` cuando el catálogo NO pudó responder
+ *   (5xx, red) o la respuesta no es válida: en esos casos no podemos saber si
+ *   el producto existe ni con qué impuestos gravar la línea. Crear la línea
+ *   sin impuestos (o con snapshot vacío) silenciosamente corrompería la
+ *   facturación, así que el caller responde 503 (TEST-PLAN.md #2).
  */
 export interface ProductCatalogPort {
   findById(organizationId: string, productId: string): Promise<ProductCatalogInfo | null>;

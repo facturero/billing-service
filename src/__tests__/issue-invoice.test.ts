@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IssueInvoiceUseCase } from '../application/use-cases/issue-invoice.js';
 import { EstablishmentNotFoundError, EmissionPointNotFoundError, EmissionPointInactiveError, BadRequestError } from '../domain/errors.js';
-import { Invoice } from '../domain/entities.js';
+import { Invoice, Sequence } from '../domain/entities.js';
 import type { UnitOfWork, OrganizationCatalogPort, CustomerCatalogPort, IssuerInfo, EstablishmentInfo, EmissionPointInfo, CustomerInfo } from '../application/ports.js';
 import type { AllRepositories } from '../domain/repositories.js';
 
@@ -51,23 +51,42 @@ function mockUow(repos: AllRepositories): UnitOfWork {
   return { execute: vi.fn().mockImplementation(async (fn: (repos: AllRepositories) => Promise<any>) => fn(repos)) };
 }
 
-function mockRepos(invoice: Invoice): AllRepositories {
+function mockRepos(invoice: Invoice, existingSequence: Sequence | null = makeSequence()): AllRepositories {
   return {
     business: {
       invoices: { save: vi.fn(), findById: vi.fn(), findByIdAndOrganization: vi.fn().mockResolvedValue(invoice), findByOrganization: vi.fn(), delete: vi.fn() },
       invoiceLines: { findByInvoice: vi.fn().mockResolvedValue([]), findById: vi.fn(), save: vi.fn(), delete: vi.fn() },
       lineTaxes: { findByInvoiceLine: vi.fn().mockResolvedValue([]), findByInvoice: vi.fn().mockResolvedValue([]), save: vi.fn(), deleteByInvoiceLine: vi.fn(), deleteByInvoice: vi.fn() },
       invoiceTaxTotals: { findByInvoice: vi.fn().mockResolvedValue([]), save: vi.fn(), deleteByInvoice: vi.fn() },
-      sequences: { findByOrganizationAndPoint: vi.fn().mockResolvedValue(null), findById: vi.fn(), save: vi.fn() },
+      sequences: {
+        findByOrganizationAndPoint: existingSequence
+          ? vi.fn().mockResolvedValue(existingSequence)
+          : vi.fn().mockResolvedValue(null),
+        findById: vi.fn(),
+        createIfAbsent: vi.fn(),
+        save: vi.fn(),
+      },
       outbox: { add: vi.fn() },
     },
   };
 }
 
+function makeSequence(overrides?: Partial<{ id: string; currentValue: number }>): Sequence {
+  return Sequence.fromPersistence({
+    id: overrides?.id ?? 'seq-1',
+    organizationId: 'org-1',
+    countryCode: 'EC',
+    establishmentId: 'est-1',
+    emissionPointId: 'ep-1',
+    documentTypeId: 'doc-1',
+    currentValue: overrides?.currentValue ?? 0,
+  });
+}
+
 describe('IssueInvoiceUseCase', () => {
-  it('issues invoice with issuerSnapshot, number, and sequence', async () => {
+  it('issues invoice with issuerSnapshot, number, and sequence (serie existente)', async () => {
     const invoice = makeDraftInvoice();
-    const repos = mockRepos(invoice);
+    const repos = mockRepos(invoice, makeSequence({ currentValue: 0 }));
     const orgCatalog = mockOrgCatalog();
     const customerCatalog = mockCustomerCatalog();
     const uow = mockUow(repos);
@@ -80,13 +99,20 @@ describe('IssueInvoiceUseCase', () => {
     expect(result.issuerSnapshot).not.toBeNull();
     expect((result.issuerSnapshot as any).legalName).toBe('Mi Empresa');
     expect(result.issueDate).not.toBeNull();
+    expect(repos.business.sequences.findByOrganizationAndPoint).toHaveBeenCalledTimes(1);
+    expect(repos.business.sequences.createIfAbsent).not.toHaveBeenCalled();
     expect(repos.business.sequences.save).toHaveBeenCalledOnce();
   });
 
   it('auto-provisions a new Sequence when none exists', async () => {
     const invoice = makeDraftInvoice();
-    const repos = mockRepos(invoice);
-    repos.business.sequences.findByOrganizationAndPoint = vi.fn().mockResolvedValue(null);
+    const repos = mockRepos(invoice, null);
+    // La primera lectura (FOR UPDATE) no encuentra serie; tras provisionar
+    // (INSERT ... IGNORE) la relectura encuentra la fila ganadora con cv=0.
+    repos.business.sequences.findByOrganizationAndPoint = vi
+      .fn()
+      .mockResolvedValueOnce(null)
+      .mockResolvedValueOnce(makeSequence({ id: 'seq-p', currentValue: 0 }));
     const orgCatalog = mockOrgCatalog();
     const customerCatalog = mockCustomerCatalog();
     const uow = mockUow(repos);
@@ -95,6 +121,8 @@ describe('IssueInvoiceUseCase', () => {
     const result = await uc.execute('org-1', 'inv-1', { establishmentId: 'est-1', emissionPointId: 'ep-1' });
 
     expect(result.number).toBe('001-001-000000001');
+    expect(repos.business.sequences.findByOrganizationAndPoint).toBeCalledTimes(2);
+    expect(repos.business.sequences.createIfAbsent).toHaveBeenCalledOnce();
     expect(repos.business.sequences.save).toHaveBeenCalledOnce();
   });
 

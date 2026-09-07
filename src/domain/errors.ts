@@ -56,6 +56,14 @@ export class ProductNotFoundError extends AppError {
   }
 }
 
+/** product-service no respondió o devolvió un error (5xx/red): no sabemos si
+ * el producto existe ni sus impuestos. No crear la línea sin impuestos. */
+export class ProductCatalogError extends AppError {
+  constructor() {
+    super('No se pudo consultar el catálogo de productos. Intente nuevamente', 503);
+  }
+}
+
 export class EstablishmentNotFoundError extends AppError {
   constructor() {
     super('Establecimiento no encontrado', 400);

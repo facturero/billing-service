@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { AddLineUseCase } from '../application/use-cases/add-line.js';
-import { InvoiceNotFoundError, BadRequestError, ProductDisabledError } from '../domain/errors.js';
+import { InvoiceNotFoundError, BadRequestError, ProductDisabledError, ProductNotFoundError, ProductCatalogError } from '../domain/errors.js';
 import { Invoice } from '../domain/entities.js';
 import type { UnitOfWork, ProductCatalogPort, TaxRatePort, ProductCatalogInfo, TaxRateInfo } from '../application/ports.js';
 import type { AllRepositories } from '../domain/repositories.js';
@@ -64,7 +64,7 @@ function mockRepos(invoice: Invoice): AllRepositories & { _savedLines: any[] } {
       },
       lineTaxes: { findByInvoiceLine: vi.fn().mockResolvedValue([]), findByInvoice: vi.fn().mockResolvedValue([]), save: vi.fn(), deleteByInvoiceLine: vi.fn(), deleteByInvoice: vi.fn() },
       invoiceTaxTotals: { findByInvoice: vi.fn().mockResolvedValue([]), save: vi.fn(), deleteByInvoice: vi.fn() },
-      sequences: { findByOrganizationAndPoint: vi.fn(), findById: vi.fn(), save: vi.fn() },
+      sequences: { findByOrganizationAndPoint: vi.fn(), findById: vi.fn(), createIfAbsent: vi.fn(), save: vi.fn() },
       outbox: { add: vi.fn() },
     },
   };
@@ -135,6 +135,47 @@ describe('AddLineUseCase', () => {
         unitPrice: '10.00',
       }),
     ).rejects.toThrow(ProductDisabledError);
+  });
+
+  it('throws ProductNotFoundError when product returns 404 (null)', async () => {
+    const invoice = makeDraftInvoice();
+    const repos = mockRepos(invoice);
+    const productCatalog = mockProductCatalog(null);
+    const taxRateCatalog = mockTaxRateCatalog();
+    const uow = mockUow(repos);
+    const uc = new AddLineUseCase(uow, productCatalog, taxRateCatalog);
+
+    await expect(
+      uc.execute('org-1', 'inv-1', {
+        productId: 'prod-404',
+        description: 'Widget',
+        quantity: 1,
+        unitPrice: '10.00',
+      }),
+    ).rejects.toThrow(ProductNotFoundError);
+  });
+
+  it('propagates ProductCatalogError when catalog is unavailable (5xx/red)', async () => {
+    const invoice = makeDraftInvoice();
+    const repos = mockRepos(invoice);
+    // El port no devuelve null en caída: LANZA, y el use case no debe
+    // tragarse el catálogo caído creando una línea sin impuestos (#2).
+    const productCatalog: ProductCatalogPort = {
+      findById: vi.fn().mockRejectedValue(new ProductCatalogError()),
+    };
+    const taxRateCatalog = mockTaxRateCatalog();
+    const uow = mockUow(repos);
+    const uc = new AddLineUseCase(uow, productCatalog, taxRateCatalog);
+
+    await expect(
+      uc.execute('org-1', 'inv-1', {
+        productId: 'prod-1',
+        description: 'Widget',
+        quantity: 1,
+        unitPrice: '10.00',
+      }),
+    ).rejects.toThrow(ProductCatalogError);
+    expect(repos.business.invoiceLines.save).not.toHaveBeenCalled();
   });
 
   it('throws when discount exceeds line subtotal', async () => {

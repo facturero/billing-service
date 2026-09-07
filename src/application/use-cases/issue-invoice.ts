@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { InvoiceNotFoundError, BadRequestError, EstablishmentNotFoundError, EmissionPointNotFoundError, EmissionPointInactiveError, MismatchedTotalsError } from '../../domain/errors.js';
+import { InvoiceNotFoundError, BadRequestError, EstablishmentNotFoundError, EmissionPointNotFoundError, EmissionPointInactiveError, MismatchedTotalsError, SequenceNotFoundError } from '../../domain/errors.js';
 import { Invoice, Sequence } from '../../domain/entities.js';
 import type { CustomerSnapshot } from '../../domain/entities.js';
 import { UnitOfWork, OrganizationCatalogPort, CustomerCatalogPort } from '../ports.js';
@@ -65,7 +65,13 @@ export class IssueInvoiceUseCase {
         address: establishment.address,
       });
 
-      // Auto-provision sequence if it doesn't exist
+      // Auto-provision sequence if it doesn't exist. El primer SELECT usa
+      // `FOR UPDATE` (repo tx-aware): si hay una serie previa, las emisiones en
+      // paralelo quedan serializadas sobre la fila y consiguen folios distintos.
+      // Si el SELECT vuelve null (primer uso), provisionamos con INSERT ... IGNORE
+      // (createIfAbsent) y releemos con lock: del posible "empate" de dos emisiones
+      // simultáneas solo sobrevive UNA fila, y la transacción perdedora se
+      // serializa sobre la fila ganadora en el re-read (TEST-PLAN.md #1).
       let sequence = await repos.business.sequences.findByOrganizationAndPoint(
         organizationId, input.emissionPointId, invoice.documentTypeId,
       );
@@ -77,6 +83,16 @@ export class IssueInvoiceUseCase {
           emissionPointId: input.emissionPointId,
           documentTypeId: invoice.documentTypeId,
         });
+        await repos.business.sequences.createIfAbsent(sequence);
+        sequence = await repos.business.sequences.findByOrganizationAndPoint(
+          organizationId, input.emissionPointId, invoice.documentTypeId,
+        );
+        if (!sequence) {
+          // Solo alcanzable si otra transacción se dispuso a crear la fila y
+          // aún no la ha hecho visible; su INSERT ... IGNORE la creará y la
+          // próxima pasada la verá. Fallo limpio en vez de escribir sin folio.
+          throw new SequenceNotFoundError();
+        }
       }
 
       const nextVal = sequence.nextValue();

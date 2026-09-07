@@ -11,7 +11,7 @@ function mockRepos(): AllRepositories {
       invoiceLines: { findByInvoice: vi.fn().mockResolvedValue([]), findById: vi.fn(), save: vi.fn(), delete: vi.fn() },
       lineTaxes: { findByInvoiceLine: vi.fn().mockResolvedValue([]), findByInvoice: vi.fn().mockResolvedValue([]), save: vi.fn(), deleteByInvoiceLine: vi.fn(), deleteByInvoice: vi.fn() },
       invoiceTaxTotals: { findByInvoice: vi.fn().mockResolvedValue([]), save: vi.fn(), deleteByInvoice: vi.fn() },
-      sequences: { findByOrganizationAndPoint: vi.fn(), findById: vi.fn(), save: vi.fn() },
+      sequences: { findByOrganizationAndPoint: vi.fn(), findById: vi.fn(), createIfAbsent: vi.fn(), save: vi.fn() },
       outbox: { add: vi.fn() },
     },
   };

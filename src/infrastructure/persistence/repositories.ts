@@ -223,7 +223,13 @@ export class SequelizeInvoiceTaxTotalRepository implements InvoiceTaxTotalReposi
 
 // ── Sequence Repository ────────────────────────────────────────────────────
 
+// La recepción de una transacción en el constructor es lo que permite que
+// findByOrganizationAndPoint use `SELECT ... FOR UPDATE`: dos emisiones en
+// paralelo del mismo punto quedan serializadas sobre el MISMO registro y
+// obtienen folios distintos (TEST-PLAN.md #1).
 export class SequelizeSequenceRepository implements SequenceRepository {
+  constructor(private readonly tx?: Transaction) {}
+
   async findByOrganizationAndPoint(organizationId: string, emissionPointId: string, documentTypeId: string): Promise<Sequence | null> {
     const row = await SequenceModel.findOne({
       where: {
@@ -231,6 +237,11 @@ export class SequelizeSequenceRepository implements SequenceRepository {
         emission_point_id: emissionPointId,
         document_type_id: documentTypeId,
       },
+      // En MySQL/InnoDB, `lock: true` emite SELECT ... FOR UPDATE: toma el lock
+      // de fila y bloca a la emisión concurrente hasta que esta transacción
+      // termina (read-modify-write atómico del folio).
+      lock: this.tx ? true : undefined,
+      transaction: this.tx,
     });
     return row ? Sequence.fromPersistence({
       id: row.id,
@@ -244,7 +255,7 @@ export class SequelizeSequenceRepository implements SequenceRepository {
   }
 
   async findById(id: string): Promise<Sequence | null> {
-    const row = await SequenceModel.findByPk(id);
+    const row = await SequenceModel.findByPk(id, { lock: this.tx ? true : undefined, transaction: this.tx });
     return row ? Sequence.fromPersistence({
       id: row.id,
       organizationId: row.organization_id,
@@ -256,17 +267,40 @@ export class SequelizeSequenceRepository implements SequenceRepository {
     }) : null;
   }
 
+  async createIfAbsent(sequence: Sequence): Promise<void> {
+    const p = sequence.toPersistence();
+    // INSERT ... IGNORE: si otra transacción ya insertó la serie (mismo
+    // organization_id + emission_point_id + document_type_id), este insert se
+    // descarta sin error. No usar upsert aquí: un ON DUPLICATE KEY UPDATE
+    // reescribiría current_value=0 y pisaría el folio ya asignado por el ganador.
+    await SequenceModel.create(
+      {
+        id: p.id,
+        organization_id: p.organizationId,
+        country_code: p.countryCode,
+        establishment_id: p.establishmentId,
+        emission_point_id: p.emissionPointId,
+        document_type_id: p.documentTypeId,
+        current_value: p.currentValue,
+      },
+      { transaction: this.tx, ignoreDuplicates: true },
+    );
+  }
+
   async save(sequence: Sequence): Promise<void> {
     const p = sequence.toPersistence();
-    await SequenceModel.upsert({
-      id: p.id,
-      organization_id: p.organizationId,
-      country_code: p.countryCode,
-      establishment_id: p.establishmentId,
-      emission_point_id: p.emissionPointId,
-      document_type_id: p.documentTypeId,
-      current_value: p.currentValue,
-    });
+    await SequenceModel.upsert(
+      {
+        id: p.id,
+        organization_id: p.organizationId,
+        country_code: p.countryCode,
+        establishment_id: p.establishmentId,
+        emission_point_id: p.emissionPointId,
+        document_type_id: p.documentTypeId,
+        current_value: p.currentValue,
+      },
+      { transaction: this.tx },
+    );
   }
 }
 
@@ -311,7 +345,7 @@ export class SequelizeUnitOfWork implements UnitOfWork {
           invoiceLines: new SequelizeInvoiceLineRepository(),
           lineTaxes: new SequelizeLineTaxRepository(),
           invoiceTaxTotals: new SequelizeInvoiceTaxTotalRepository(),
-          sequences: new SequelizeSequenceRepository(),
+          sequences: new SequelizeSequenceRepository(transaction),
           outbox: new SequelizeOutboxRepository(transaction),
         },
       });

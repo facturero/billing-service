@@ -1,5 +1,5 @@
 import { InvoiceLine, LineTax } from '../../domain/entities.js';
-import { InvoiceNotFoundError, BadRequestError, ProductDisabledError } from '../../domain/errors.js';
+import { InvoiceNotFoundError, BadRequestError, ProductDisabledError, ProductNotFoundError } from '../../domain/errors.js';
 import { UnitOfWork, ProductCatalogPort, TaxRatePort } from '../ports.js';
 import { AddLineInput, InvoiceDetailDTO, InvoiceLineDTO } from '../dts.js';
 import { invoiceToDetailDTO } from './create-invoice.js';
@@ -37,7 +37,10 @@ export class AddLineUseCase {
       const productInfo = await this.productCatalog.findById(organizationId, input.productId);
       console.log(`[billing][add-line] productInfo para ${input.productId}:`, JSON.stringify(productInfo));
 
-      if (productInfo && productInfo.status !== 'active') throw new ProductDisabledError();
+      // `null` ⇒ product-service respondió 404: el producto no existe.
+      // (Si el catálogo está caído el port LANZA ProductCatalogError/503.)
+      if (!productInfo) throw new ProductNotFoundError();
+      if (productInfo.status !== 'active') throw new ProductDisabledError();
 
       const line = InvoiceLine.create({
         invoiceId,
