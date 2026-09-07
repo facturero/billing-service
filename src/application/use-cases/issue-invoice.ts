@@ -138,6 +138,9 @@ export class IssueInvoiceUseCase {
           number: invoice.number,
           sequentialNumber: seqFormatted,
           organizationId: invoice.organizationId,
+          // Sin destinatario el gateway descarta el evento y la campana nunca
+          // suena; se omite (en vez de mandar '') si la petición no traía X-User-Id.
+          ...(input.userId ? { userId: input.userId } : {}),
           countryCode: invoice.countryCode,
           establishmentId: invoice.establishmentId,
           emissionPointId: invoice.emissionPointId,

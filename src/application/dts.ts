@@ -23,10 +23,16 @@ export interface AddLineInput {
 export interface IssueInvoiceInput {
   establishmentId: string;
   emissionPointId: string;
+  /** Usuario que emite (X-User-Id). Viaja en el evento para que el gateway sepa
+   *  a qué sala `user:<uid>` mandar la campana y notification-service pueda
+   *  respetar la preferencia smtp del usuario. */
+  userId?: string;
 }
 
 export interface VoidInvoiceInput {
   reason: string;
+  /** Usuario que anula (X-User-Id). Ver IssueInvoiceInput.userId. */
+  userId?: string;
 }
 
 export interface ListInvoicesParams {

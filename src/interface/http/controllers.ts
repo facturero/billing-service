@@ -109,6 +109,7 @@ export function issueInvoiceController(useCase: IssueInvoiceUseCase) {
     const result = await useCase.execute(organizationId, invoiceId, {
       establishmentId: body.establishmentId,
       emissionPointId: body.emissionPointId,
+      userId: c.get('userId'),
     });
     return c.json(result, 200);
   };
@@ -121,6 +122,7 @@ export function voidInvoiceController(useCase: VoidInvoiceUseCase) {
     const body = c.req.valid('json' as never) as { reason: string };
     const result = await useCase.execute(organizationId, invoiceId, {
       reason: body.reason,
+      userId: c.get('userId'),
     });
     return c.json(result, 200);
   };

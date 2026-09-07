@@ -25,8 +25,11 @@ export class VoidInvoiceUseCase {
         payload: {
           invoiceId: invoice.id,
           number: invoice.number,
+          organizationId: invoice.organizationId,
           reason: input.reason,
           voidedAt: invoice.voidedAt,
+          // Ver issue-invoice: sin userId el gateway no tiene sala a la que emitir.
+          ...(input.userId ? { userId: input.userId } : {}),
         },
         occurredAt: new Date(),
       });
