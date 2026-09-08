@@ -4,6 +4,7 @@ import { Invoice, InvoiceLine, LineTax, InvoiceTaxTotal, Sequence } from '../../
 import { InvoiceRepository, InvoiceLineRepository, LineTaxRepository, InvoiceTaxTotalRepository, SequenceRepository, OutboxRepository } from '../../domain/repositories.js';
 import { AllRepositories } from '../../domain/repositories.js';
 import { UnitOfWork } from '../../application/ports.js';
+import { withActor } from '@facturero/outbox-relay';
 import { sequelize } from './sequelize.js';
 import { InvoiceModel, InvoiceLineModel, LineTaxModel, InvoiceTaxTotalModel, SequenceModel, OutboxModel } from './models.js';
 
@@ -324,7 +325,10 @@ export class SequelizeOutboxRepository implements OutboxRepository {
         aggregate_type: entry.aggregateType,
         aggregate_id: entry.aggregateId,
         type: entry.type,
-        payload: entry.payload as any,
+        // Inyecta actor/ip/request-id desde el contexto de la petición.
+        // Sin esto la bitácora de auditoría no sabe QUIÉN hizo cada cosa: el
+        // `userId` que ya llevan algunos payloads es el usuario AFECTADO.
+        payload: withActor((entry.payload ?? {}) as Record<string, unknown>) as any,
         occurred_at: entry.occurredAt,
         processed_at: null,
       },

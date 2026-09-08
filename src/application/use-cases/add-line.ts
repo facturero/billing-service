@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { InvoiceLine, LineTax } from '../../domain/entities.js';
 import { InvoiceNotFoundError, BadRequestError, ProductDisabledError, ProductNotFoundError } from '../../domain/errors.js';
 import { UnitOfWork, ProductCatalogPort, TaxRatePort } from '../ports.js';
@@ -144,6 +145,23 @@ export class AddLineUseCase {
       await repos.business.invoices.save(invoice);
 
       await recomputeAndSaveTaxTotals(invoiceId, allLineTaxes, repos.business);
+
+      // Modificar el contenido de una factura (aunque sea borrador) cambia sus
+      // importes: tiene que quedar en la bitácora, no solo el alta y la emisión.
+      await repos.business.outbox.add({
+        eventId: randomUUID(),
+        organizationId: invoice.organizationId,
+        type: 'billing.invoice.line_added',
+        aggregateType: 'invoice',
+        aggregateId: invoice.id,
+        payload: {
+          invoiceId: invoice.id,
+          organizationId: invoice.organizationId,
+          status: invoice.status,
+          totalCents: invoice.totalCents,
+        },
+        occurredAt: new Date(),
+      });
 
       const taxTotals = await repos.business.invoiceTaxTotals.findByInvoice(invoiceId);
       const linesDTO = invoiceLines.map(l => ({

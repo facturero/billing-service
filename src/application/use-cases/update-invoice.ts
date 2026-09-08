@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto';
 import { InvoiceNotFoundError, BadRequestError, CustomerNotFoundError, CustomerDisabledError } from '../../domain/errors.js';
 import { Invoice } from '../../domain/entities.js';
 import type { CustomerSnapshot } from '../../domain/entities.js';
@@ -54,6 +55,23 @@ export class UpdateInvoiceUseCase {
         lineTaxes.push(...taxes);
       }
       const taxTotals = await repos.business.invoiceTaxTotals.findByInvoice(invoiceId);
+
+      // Cambiar cliente, fecha o notas de una factura tiene que dejar rastro
+      // igual que crearla o emitirla.
+      await repos.business.outbox.add({
+        eventId: randomUUID(),
+        organizationId: updatedInvoice.organizationId,
+        type: 'billing.invoice.updated',
+        aggregateType: 'invoice',
+        aggregateId: updatedInvoice.id,
+        payload: {
+          invoiceId: updatedInvoice.id,
+          organizationId: updatedInvoice.organizationId,
+          status: updatedInvoice.status,
+          totalCents: updatedInvoice.totalCents,
+        },
+        occurredAt: new Date(),
+      });
 
       const linesDTO = lines.map(l => ({
         id: l.id, productId: l.productId, productSnapshot: l.productSnapshot, description: l.description,
