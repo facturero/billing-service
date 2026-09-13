@@ -38,8 +38,10 @@ export class IssueInvoiceUseCase {
       if (!invoice) throw new InvoiceNotFoundError(invoiceId);
       if (invoice.status !== 'draft') throw new BadRequestError('La factura ya fue emitida o anulada');
 
-      // Defensive: set customer snapshot if missing (resilient for pre-Phase-2 invoices)
-      if (!invoice.customerSnapshot) {
+      // Defensive: set customer snapshot if missing (resilient for pre-Phase-2 invoices).
+      // También si le falta el código del tipo de identificación: los borradores
+      // creados antes de guardarlo lo necesitan para que fiscal declare bien al comprador.
+      if (!invoice.customerSnapshot || !invoice.customerSnapshot.identificationTypeCode) {
         const customerInfo = await this.customerCatalog.findById(organizationId, invoice.customerId);
         if (customerInfo) {
           const snapshot: CustomerSnapshot = {
@@ -47,6 +49,7 @@ export class IssueInvoiceUseCase {
             businessName: customerInfo.businessName,
             identification: customerInfo.identification,
             identificationTypeId: customerInfo.identificationTypeId,
+            identificationTypeCode: customerInfo.identificationTypeCode,
             email: customerInfo.email,
             phone: customerInfo.phone,
             type: customerInfo.type,
@@ -137,6 +140,10 @@ export class IssueInvoiceUseCase {
           invoiceId: invoice.id,
           number: invoice.number,
           sequentialNumber: seqFormatted,
+          // Fecha legal del comprobante. fiscal-ecuador la usa en fechaEmision y
+          // en la clave de acceso; sin ella tomaba la hora a la que procesaba el
+          // evento, que puede caer en otro día.
+          issueDate: invoice.issueDate?.toISOString() ?? null,
           organizationId: invoice.organizationId,
           // Sin destinatario el gateway descarta el evento y la campana nunca
           // suena; se omite (en vez de mandar '') si la petición no traía X-User-Id.
@@ -152,6 +159,8 @@ export class IssueInvoiceUseCase {
           currencyCode: invoice.currencyCode,
           lines: lines.map(l => ({
             productId: l.productId,
+            // El SKU va al codigoPrincipal del SRI; el UUID interno no cabe (máx. 25).
+            productCode: l.productSnapshot?.sku ?? null,
             description: l.description,
             quantity: l.quantity,
             unitPriceCents: l.unitPriceCents,

@@ -8,7 +8,7 @@ import type { AllRepositories } from '../domain/repositories.js';
 const orgInfo: IssuerInfo = { legalName: 'Mi Empresa', tradeName: 'ME', taxId: '1234567890' };
 const establishmentInfo: EstablishmentInfo = { id: 'est-1', code: '001', name: 'Matriz', address: 'Dir', status: 'active' };
 const emissionPointInfo: EmissionPointInfo = { id: 'ep-1', code: '001', name: 'Punto 1', status: 'active' };
-const customerInfo: CustomerInfo = { id: 'cust-1', identificationTypeId: 't1', identification: '111', businessName: 'Cliente', tradeName: null, email: null, phone: null, type: 'person', status: 'active' };
+const customerInfo: CustomerInfo = { id: 'cust-1', identificationTypeId: 't1', identificationTypeCode: 'RUC', identification: '111', businessName: 'Cliente', tradeName: null, email: null, phone: null, type: 'person', status: 'active' };
 
 function mockOrgCatalog(org: IssuerInfo | null = orgInfo, est: EstablishmentInfo | null = establishmentInfo, ep: EmissionPointInfo | null = emissionPointInfo): OrganizationCatalogPort {
   return {

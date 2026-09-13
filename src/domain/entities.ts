@@ -10,6 +10,12 @@ export interface CustomerSnapshot {
   businessName: string;
   identification: string;
   identificationTypeId: string;
+  /**
+   * Código del tipo (RUC, CEDULA, PASAPORTE...). Es lo que usa fiscal-ecuador
+   * para declarar al comprador: el id es del catálogo de customer-service y no
+   * coincide con el de tax-service. Opcional porque las facturas anteriores no lo tienen.
+   */
+  identificationTypeCode?: string | null;
   email: string | null;
   phone: string | null;
   type: 'person' | 'company';

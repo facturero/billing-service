@@ -108,3 +108,25 @@ spec:
                 secretKeyRef:
                   name: internal-service-secret
                   key: value
+          # Mismos valores que fiscal-ecuador. Sin límites, un pico de PDFs podía
+          # llevarse la memoria del nodo; sin probes, un proceso colgado seguía
+          # recibiendo tráfico.
+          resources:
+            requests:
+              memory: "128Mi"
+              cpu: "100m"
+            limits:
+              memory: "384Mi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3009
+            initialDelaySeconds: 15
+            periodSeconds: 15
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3009
+            initialDelaySeconds: 5
+            periodSeconds: 10

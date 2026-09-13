@@ -27,7 +27,7 @@ function mockUow(repos: AllRepositories): UnitOfWork {
 
 const validCustomer: CustomerInfo = {
   id: 'cust-1',
-  identificationTypeId: 'type-1',
+  identificationTypeId: 'type-1', identificationTypeCode: 'RUC',
   identification: '1234567890',
   businessName: 'Test Customer',
   tradeName: null,

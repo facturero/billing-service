@@ -31,6 +31,7 @@ export class UpdateInvoiceUseCase {
           businessName: customerInfo.businessName,
           identification: customerInfo.identification,
           identificationTypeId: customerInfo.identificationTypeId,
+          identificationTypeCode: customerInfo.identificationTypeCode,
           email: customerInfo.email,
           phone: customerInfo.phone,
           type: customerInfo.type,

@@ -33,98 +33,63 @@ export class AddLineUseCase {
         throw new BadRequestError('El descuento no puede ser mayor al subtotal de la línea');
       }
 
-      const lineSubtotalCents = (input.quantity * unitPriceCents) - (input.discountCents ?? 0);
-
       const productInfo = await this.productCatalog.findById(organizationId, input.productId);
-      console.log(`[billing][add-line] productInfo para ${input.productId}:`, JSON.stringify(productInfo));
 
       // `null` ⇒ product-service respondió 404: el producto no existe.
       // (Si el catálogo está caído el port LANZA ProductCatalogError/503.)
       if (!productInfo) throw new ProductNotFoundError();
       if (productInfo.status !== 'active') throw new ProductDisabledError();
 
+      const rateInfos = await Promise.all(
+        productInfo.taxes.map((pt) => this.taxRateCatalog.findRate(invoice.countryCode, pt.taxRateId)),
+      );
+      const rates = rateInfos.map((ri) => (ri ? parseFloat(ri.percentage) : 0));
+
+      // La línea guarda SIEMPRE importes sin impuestos: precio unitario,
+      // descuento y subtotal son la base, y el impuesto va aparte. Es lo que
+      // declara el SRI (precioUnitario, precioTotalSinImpuesto) y lo que asume
+      // el total de la factura (subtotal + impuestos).
+      //
+      // Antes, con precio con IVA incluido, la línea guardaba el importe CON IVA
+      // como subtotal y el total volvía a sumarle el IVA: 10 × $11,50 salía a
+      // $130 en vez de $115. Ahora el IVA se quita del precio y del descuento
+      // primero, y se calcula una sola vez sobre la base. Puede haber un
+      // centavo de diferencia con el precio de góndola por redondeo, pero la
+      // factura cuadra siempre (base × tarifa = impuesto).
+      const includedRatePercent = productInfo.priceIncludesTax ? rates.reduce((sum, r) => sum + r, 0) : 0;
+      const withoutTax = (cents: number) => Math.round(cents / (1 + includedRatePercent / 100));
+      const netUnitPriceCents = withoutTax(unitPriceCents);
+      const netDiscountCents = withoutTax(input.discountCents ?? 0);
+      const lineSubtotalCents = Math.round(input.quantity * netUnitPriceCents) - netDiscountCents;
+
       const line = InvoiceLine.create({
         invoiceId,
         productId: input.productId,
-        productSnapshot: productInfo
-          ? { id: productInfo.id, name: productInfo.name, sku: productInfo.sku, unit: productInfo.unit }
-          : undefined,
+        productSnapshot: { id: productInfo.id, name: productInfo.name, sku: productInfo.sku, unit: productInfo.unit },
         description: input.description,
         quantity: input.quantity,
-        unitPriceCents,
-        discountCents: input.discountCents ?? 0,
+        unitPriceCents: netUnitPriceCents,
+        discountCents: netDiscountCents,
         subtotalCents: lineSubtotalCents,
       });
 
       await repos.business.invoiceLines.save(line);
 
-      // ── Impuestos: uno por cada tasa asignada al producto (IVA, retenciones, etc.) ──
+      // ── Impuestos: uno por cada tasa asignada al producto, sobre la base ──
       const newLineTaxes: LineTax[] = [];
-      console.log(`[billing][add-line] productInfo?.taxes:`, JSON.stringify(productInfo?.taxes ?? []));
-
-      // Pre-fetch all rate info
-      const rateInfos = await Promise.all(
-        (productInfo?.taxes ?? []).map((pt) =>
-          this.taxRateCatalog.findRate(invoice.countryCode, pt.taxRateId),
-        ),
-      );
-
-      if (productInfo?.priceIncludesTax && productInfo.taxes.length > 1) {
-        // Multi-tax with priceIncludesTax: extract combined base once, distribute proportionally
-        const totalRatePercent = rateInfos.reduce((sum, ri) => sum + (ri ? parseFloat(ri.percentage) : 0), 0);
-        const baseCents = Math.round(lineSubtotalCents / (1 + totalRatePercent / 100));
-        const totalTaxAmount = lineSubtotalCents - baseCents;
-
-        for (let i = 0; i < productInfo.taxes.length; i++) {
-          const productTax = productInfo.taxes[i];
-          const rateInfo = rateInfos[i];
-          const ratePercent = rateInfo ? parseFloat(rateInfo.percentage) : 0;
-          const amountCents = totalRatePercent > 0
-            ? Math.round(totalTaxAmount * (ratePercent / totalRatePercent))
-            : 0;
-
-          console.log(`[billing][add-line] multi-tax: ratePercent=${ratePercent} baseCents=${baseCents} amountCents=${amountCents}`);
-
-          const lt = LineTax.create({
-            invoiceLineId: line.id,
-            taxRateId: productTax.taxRateId,
-            kind: productTax.kind as 'vat' | 'withholding_iva' | 'withholding_rent' | 'special',
-            rateSnapshot: rateInfo ? rateInfo.percentage : '0',
-            baseCents,
-            amountCents,
-          });
-          await repos.business.lineTaxes.save(lt);
-          newLineTaxes.push(lt);
-        }
-      } else {
-        // Single tax or no priceIncludesTax: each tax calculated independently
-        for (let i = 0; i < (productInfo?.taxes ?? []).length; i++) {
-          const productTax = productInfo!.taxes[i];
-          const rateInfo = rateInfos[i];
-          const ratePercent = rateInfo ? parseFloat(rateInfo.percentage) : 0;
-
-          let baseCents = lineSubtotalCents;
-          let amountCents = 0;
-          if (productInfo?.priceIncludesTax) {
-            baseCents = Math.round(lineSubtotalCents / (1 + ratePercent / 100));
-            amountCents = lineSubtotalCents - baseCents;
-          } else {
-            amountCents = Math.round(lineSubtotalCents * (ratePercent / 100));
-          }
-
-          console.log(`[billing][add-line] single-tax: ratePercent=${ratePercent} baseCents=${baseCents} amountCents=${amountCents} priceIncludesTax=${productInfo?.priceIncludesTax}`);
-
-          const lt = LineTax.create({
-            invoiceLineId: line.id,
-            taxRateId: productTax.taxRateId,
-            kind: productTax.kind as 'vat' | 'withholding_iva' | 'withholding_rent' | 'special',
-            rateSnapshot: rateInfo ? rateInfo.percentage : '0',
-            baseCents,
-            amountCents,
-          });
-          await repos.business.lineTaxes.save(lt);
-          newLineTaxes.push(lt);
-        }
+      for (let i = 0; i < productInfo.taxes.length; i++) {
+        const productTax = productInfo.taxes[i];
+        const rateInfo = rateInfos[i];
+        const lt = LineTax.create({
+          invoiceLineId: line.id,
+          taxRateId: productTax.taxRateId,
+          kind: productTax.kind as 'vat' | 'withholding_iva' | 'withholding_rent' | 'special',
+          rateSnapshot: rateInfo ? rateInfo.percentage : '0',
+          baseCents: lineSubtotalCents,
+          amountCents: Math.round(lineSubtotalCents * (rates[i] / 100)),
+        });
+        await repos.business.lineTaxes.save(lt);
+        newLineTaxes.push(lt);
       }
 
       const existingTaxes = await repos.business.lineTaxes.findByInvoice(invoiceId);

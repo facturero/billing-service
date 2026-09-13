@@ -32,6 +32,7 @@ export class HttpCustomerCatalog implements CustomerCatalogPort {
       const data = await res.json() as {
         id: string;
         identificationTypeId: string | null;
+        identificationTypeCode?: string | null;
         identification: string | null;
         businessName: string;
         tradeName: string | null;
@@ -45,6 +46,7 @@ export class HttpCustomerCatalog implements CustomerCatalogPort {
       const result: CustomerInfo = {
         id: data.id,
         identificationTypeId: data.identificationTypeId ?? '',
+        identificationTypeCode: data.identificationTypeCode ?? null,
         identification: data.identification ?? '',
         businessName: data.businessName,
         tradeName: data.tradeName ?? null,

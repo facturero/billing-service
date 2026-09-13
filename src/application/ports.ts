@@ -75,6 +75,8 @@ export interface OrganizationCatalogPort {
 export interface CustomerInfo {
   id: string;
   identificationTypeId: string;
+  /** RUC, CEDULA, PASAPORTE... Ver CustomerSnapshot.identificationTypeCode. */
+  identificationTypeCode: string | null;
   identification: string;
   businessName: string;
   tradeName: string | null;
