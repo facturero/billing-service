@@ -6,10 +6,11 @@ export class HttpDocumentStorage implements DocumentStoragePort {
     private readonly internalSecret: string,
   ) {}
 
-  async upload(params: { resourceId: string; category: string; originalName: string; mimeType: string; buffer: Buffer }): Promise<void> {
+  async upload(params: { organizationId: string; resourceId: string; category: string; originalName: string; mimeType: string; buffer: Buffer }): Promise<void> {
     const formData = new FormData();
     formData.append('resourceType', 'invoice');
     formData.append('resourceId', params.resourceId);
+    formData.append('organizationId', params.organizationId);
     formData.append('category', params.category);
     formData.append('originalName', params.originalName);
     formData.append('mimeType', params.mimeType);

@@ -93,5 +93,6 @@ export interface CustomerCatalogPort {
 // ── Document Storage (server-to-server upload) ──────────────────────────
 
 export interface DocumentStoragePort {
-  upload(params: { resourceId: string; category: string; originalName: string; mimeType: string; buffer: Buffer }): Promise<void>;
+  /** `organizationId`: document-service solo sirve el archivo a esa organización. */
+  upload(params: { organizationId: string; resourceId: string; category: string; originalName: string; mimeType: string; buffer: Buffer }): Promise<void>;
 }

@@ -24,6 +24,7 @@ export const invoiceIssuedHandler: EventHandler = {
       console.log(`[billing][documents] Generando ${gen.key} para factura ${event.number}...`);
       const buffer = await gen.render(event);
       await documentStorage.upload({
+        organizationId: event.organizationId,
         resourceId: event.invoiceId,
         category: 'comprobante',
         originalName: `factura-${event.number}.${gen.fileExtension}`,
