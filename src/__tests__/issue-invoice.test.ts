@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { IssueInvoiceUseCase } from '../application/use-cases/issue-invoice.js';
 import { EstablishmentNotFoundError, EmissionPointNotFoundError, EmissionPointInactiveError, BadRequestError } from '../domain/errors.js';
 import { Invoice, Sequence } from '../domain/entities.js';
-import type { UnitOfWork, OrganizationCatalogPort, CustomerCatalogPort, IssuerInfo, EstablishmentInfo, EmissionPointInfo, CustomerInfo } from '../application/ports.js';
+import type { UnitOfWork, OrganizationCatalogPort, CustomerCatalogPort, DocumentTypeCatalogPort, IssuerInfo, EstablishmentInfo, EmissionPointInfo, CustomerInfo, DocumentTypeInfo } from '../application/ports.js';
 import type { AllRepositories } from '../domain/repositories.js';
 
 const orgInfo: IssuerInfo = { legalName: 'Mi Empresa', tradeName: 'ME', taxId: '1234567890' };
@@ -22,7 +22,16 @@ function mockCustomerCatalog(customer: CustomerInfo | null = customerInfo): Cust
   return { findById: vi.fn().mockResolvedValue(customer) };
 }
 
-function makeDraftInvoice(overrides?: Partial<{ customerId: string; customerSnapshot: any }>): Invoice {
+const documentTypes: DocumentTypeInfo[] = [
+  { id: 'doc-1', countryCode: 'EC', code: '01', name: 'Factura' },
+  { id: 'doc-4', countryCode: 'EC', code: '04', name: 'Nota de Crédito' },
+];
+
+function mockDocumentTypeCatalog(types: DocumentTypeInfo[] = documentTypes): DocumentTypeCatalogPort {
+  return { listByCountry: vi.fn().mockResolvedValue(types) };
+}
+
+function makeDraftInvoice(overrides?: Partial<{ customerId: string; customerSnapshot: any; relatedInvoiceId: string | null; creditNoteReason: string | null }>): Invoice {
   return Invoice.fromPersistence({
     id: 'inv-1',
     organizationId: 'org-1',
@@ -42,6 +51,8 @@ function makeDraftInvoice(overrides?: Partial<{ customerId: string; customerSnap
     status: 'draft',
     voidedAt: null,
     voidedReason: null,
+    relatedInvoiceId: overrides?.relatedInvoiceId ?? null,
+    creditNoteReason: overrides?.creditNoteReason ?? null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -90,7 +101,7 @@ describe('IssueInvoiceUseCase', () => {
     const orgCatalog = mockOrgCatalog();
     const customerCatalog = mockCustomerCatalog();
     const uow = mockUow(repos);
-    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog);
+    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog, mockDocumentTypeCatalog());
 
     const result = await uc.execute('org-1', 'inv-1', { establishmentId: 'est-1', emissionPointId: 'ep-1' });
 
@@ -102,6 +113,11 @@ describe('IssueInvoiceUseCase', () => {
     expect(repos.business.sequences.findByOrganizationAndPoint).toHaveBeenCalledTimes(1);
     expect(repos.business.sequences.createIfAbsent).not.toHaveBeenCalled();
     expect(repos.business.sequences.save).toHaveBeenCalledOnce();
+
+    const issuedEvent = (repos.business.outbox.add as any).mock.calls[0][0];
+    expect(issuedEvent.type).toBe('billing.invoice.issued');
+    expect(issuedEvent.payload.documentTypeCode).toBe('01');
+    expect(issuedEvent.payload.relatedInvoiceId).toBeUndefined();
   });
 
   it('auto-provisions a new Sequence when none exists', async () => {
@@ -116,7 +132,7 @@ describe('IssueInvoiceUseCase', () => {
     const orgCatalog = mockOrgCatalog();
     const customerCatalog = mockCustomerCatalog();
     const uow = mockUow(repos);
-    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog);
+    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog, mockDocumentTypeCatalog());
 
     const result = await uc.execute('org-1', 'inv-1', { establishmentId: 'est-1', emissionPointId: 'ep-1' });
 
@@ -132,7 +148,7 @@ describe('IssueInvoiceUseCase', () => {
     const orgCatalog = mockOrgCatalog(null, null, null);
     const customerCatalog = mockCustomerCatalog();
     const uow = mockUow(repos);
-    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog);
+    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog, mockDocumentTypeCatalog());
 
     await expect(
       uc.execute('org-1', 'inv-1', { establishmentId: 'bad', emissionPointId: 'ep-1' }),
@@ -145,7 +161,7 @@ describe('IssueInvoiceUseCase', () => {
     const orgCatalog = mockOrgCatalog(orgInfo, establishmentInfo, null);
     const customerCatalog = mockCustomerCatalog();
     const uow = mockUow(repos);
-    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog);
+    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog, mockDocumentTypeCatalog());
 
     await expect(
       uc.execute('org-1', 'inv-1', { establishmentId: 'est-1', emissionPointId: 'bad' }),
@@ -158,7 +174,7 @@ describe('IssueInvoiceUseCase', () => {
     const orgCatalog = mockOrgCatalog(orgInfo, establishmentInfo, { ...emissionPointInfo, status: 'inactive' });
     const customerCatalog = mockCustomerCatalog();
     const uow = mockUow(repos);
-    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog);
+    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog, mockDocumentTypeCatalog());
 
     await expect(
       uc.execute('org-1', 'inv-1', { establishmentId: 'est-1', emissionPointId: 'ep-1' }),
@@ -171,7 +187,7 @@ describe('IssueInvoiceUseCase', () => {
     const orgCatalog = mockOrgCatalog();
     const customerCatalog = mockCustomerCatalog(customerInfo);
     const uow = mockUow(repos);
-    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog);
+    const uc = new IssueInvoiceUseCase(uow, orgCatalog, customerCatalog, mockDocumentTypeCatalog());
 
     const result = await uc.execute('org-1', 'inv-1', { establishmentId: 'est-1', emissionPointId: 'ep-1' });
 

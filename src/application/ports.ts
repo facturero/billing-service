@@ -41,6 +41,27 @@ export interface TaxRatePort {
   findRate(countryCode: string, taxRateId: string): Promise<TaxRateInfo | null>;
 }
 
+// ── Document Type Catalog ─────────────────────────────────────────────────
+
+export interface DocumentTypeInfo {
+  id: string;
+  countryCode: string;
+  /** Código SRI del tipo de comprobante: '01' factura, '04' nota de crédito... */
+  code: string;
+  name: string;
+}
+
+/**
+ * Consulta tax-service para resolver el código SRI del tipo documental de una
+ * factura. Es lo que le dice a fiscal-ecuador qué XML armar al recibir el
+ * evento billing.invoice.issued (`documentTypeCode` en el payload; 01 por
+ * defecto). La nota de crédito (#20) se emite con un tipo 04, por eso billing
+ * necesita conocer el código.
+ */
+export interface DocumentTypeCatalogPort {
+  listByCountry(countryCode: string): Promise<DocumentTypeInfo[]>;
+}
+
 // ── Organization Catalog ──────────────────────────────────────────────────
 
 export interface IssuerInfo {

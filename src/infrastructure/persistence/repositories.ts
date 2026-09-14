@@ -55,6 +55,8 @@ export class SequelizeInvoiceRepository implements InvoiceRepository {
       status: p.status,
       voided_at: p.voidedAt,
       voided_reason: p.voidedReason,
+      related_invoice_id: p.relatedInvoiceId,
+      credit_note_reason: p.creditNoteReason,
       created_at: p.createdAt,
       updated_at: p.updatedAt,
     });
@@ -85,6 +87,8 @@ function mapInvoice(row: InvoiceModel): Invoice {
     status: row.status as any,
     voidedAt: row.voided_at,
     voidedReason: row.voided_reason,
+    relatedInvoiceId: row.related_invoice_id,
+    creditNoteReason: row.credit_note_reason,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   });

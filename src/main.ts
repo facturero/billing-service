@@ -5,6 +5,7 @@ import './infrastructure/persistence/models.js';
 import { SequelizeUnitOfWork, SequelizeInvoiceRepository, SequelizeInvoiceLineRepository, SequelizeLineTaxRepository, SequelizeInvoiceTaxTotalRepository } from './infrastructure/persistence/repositories.js';
 import { HttpProductCatalog } from './infrastructure/http/product-catalog.js';
 import { HttpTaxRateCatalog } from './infrastructure/http/tax-rate-catalog.js';
+import { HttpDocumentTypeCatalog } from './infrastructure/http/document-type-catalog.js';
 import { HttpOrganizationCatalog } from './infrastructure/http/organization-catalog.js';
 import { HttpCustomerCatalog } from './infrastructure/http/customer-catalog.js';
 import { CreateInvoiceUseCase } from './application/use-cases/create-invoice.js';
@@ -14,6 +15,7 @@ import { UpdateInvoiceUseCase } from './application/use-cases/update-invoice.js'
 import { AddLineUseCase } from './application/use-cases/add-line.js';
 import { RemoveLineUseCase } from './application/use-cases/remove-line.js';
 import { IssueInvoiceUseCase } from './application/use-cases/issue-invoice.js';
+import { IssueCreditNoteUseCase } from './application/use-cases/issue-credit-note.js';
 import { VoidInvoiceUseCase } from './application/use-cases/void-invoice.js';
 import { createApp } from './interface/http/app.js';
 import { OutboxRelay } from '@facturero/outbox-relay';
@@ -42,6 +44,7 @@ async function main(): Promise<void> {
   const taxTotalRepo = new SequelizeInvoiceTaxTotalRepository();
   const productCatalog = new HttpProductCatalog(config.PRODUCT_SERVICE_URL);
   const taxRateCatalog = new HttpTaxRateCatalog(config.TAX_SERVICE_URL);
+  const documentTypeCatalog = new HttpDocumentTypeCatalog(config.TAX_SERVICE_URL);
   const organizationCatalog = new HttpOrganizationCatalog(config.ORG_SERVICE_URL);
   const customerCatalog = new HttpCustomerCatalog(config.CUSTOMER_SERVICE_URL);
 
@@ -53,7 +56,8 @@ async function main(): Promise<void> {
       updateInvoice: new UpdateInvoiceUseCase(uow, customerCatalog),
       addLine: new AddLineUseCase(uow, productCatalog, taxRateCatalog),
       removeLine: new RemoveLineUseCase(uow),
-      issueInvoice: new IssueInvoiceUseCase(uow, organizationCatalog, customerCatalog),
+      issueInvoice: new IssueInvoiceUseCase(uow, organizationCatalog, customerCatalog, documentTypeCatalog),
+      issueCreditNote: new IssueCreditNoteUseCase(uow, organizationCatalog, customerCatalog, documentTypeCatalog),
       voidInvoice: new VoidInvoiceUseCase(uow),
     },
     corsOrigin: config.CORS_ORIGIN,

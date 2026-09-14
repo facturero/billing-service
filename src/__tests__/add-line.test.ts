@@ -25,6 +25,8 @@ function makeDraftInvoice(): Invoice {
     status: 'draft',
     voidedAt: null,
     voidedReason: null,
+    relatedInvoiceId: null,
+    creditNoteReason: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });

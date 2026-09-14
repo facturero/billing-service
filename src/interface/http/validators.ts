@@ -26,6 +26,12 @@ export const issueInvoiceSchema = z.object({
   emissionPointId: z.string().uuid(),
 });
 
+export const creditNoteSchema = z.object({
+  establishmentId: z.string().uuid(),
+  emissionPointId: z.string().uuid(),
+  reason: z.string().min(1).max(300),
+});
+
 export const voidInvoiceSchema = z.object({
   reason: z.string().min(1).max(255),
 });

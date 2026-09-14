@@ -6,6 +6,7 @@ import { UpdateInvoiceUseCase } from '../../application/use-cases/update-invoice
 import { AddLineUseCase } from '../../application/use-cases/add-line.js';
 import { RemoveLineUseCase } from '../../application/use-cases/remove-line.js';
 import { IssueInvoiceUseCase } from '../../application/use-cases/issue-invoice.js';
+import { IssueCreditNoteUseCase } from '../../application/use-cases/issue-credit-note.js';
 import { VoidInvoiceUseCase } from '../../application/use-cases/void-invoice.js';
 import {
   createInvoiceController,
@@ -15,6 +16,7 @@ import {
   addLineController,
   removeLineController,
   issueInvoiceController,
+  issueCreditNoteController,
   voidInvoiceController,
 } from './controllers.js';
 import {
@@ -22,6 +24,7 @@ import {
   updateInvoiceSchema,
   addLineSchema,
   issueInvoiceSchema,
+  creditNoteSchema,
   voidInvoiceSchema,
   validateJson,
 } from './validators.js';
@@ -38,6 +41,7 @@ export interface AppDependencies {
     addLine: AddLineUseCase;
     removeLine: RemoveLineUseCase;
     issueInvoice: IssueInvoiceUseCase;
+    issueCreditNote: IssueCreditNoteUseCase;
     voidInvoice: VoidInvoiceUseCase;
   };
   corsOrigin: string;
@@ -97,6 +101,12 @@ export function invoiceRoutes(deps: AppDependencies): Hono<Vars> {
     requirePermission('invoice:void'),
     validateJson(voidInvoiceSchema),
     voidInvoiceController(useCases.voidInvoice));
+
+  r.post('/invoices/:id/credit-note',
+    requireOrganization(),
+    requirePermission('invoice:issue'),
+    validateJson(creditNoteSchema),
+    issueCreditNoteController(useCases.issueCreditNote));
 
   return r;
 }

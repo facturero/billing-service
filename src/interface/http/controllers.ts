@@ -6,6 +6,7 @@ import { UpdateInvoiceUseCase } from '../../application/use-cases/update-invoice
 import { AddLineUseCase } from '../../application/use-cases/add-line.js';
 import { RemoveLineUseCase } from '../../application/use-cases/remove-line.js';
 import { IssueInvoiceUseCase } from '../../application/use-cases/issue-invoice.js';
+import { IssueCreditNoteUseCase } from '../../application/use-cases/issue-credit-note.js';
 import { VoidInvoiceUseCase } from '../../application/use-cases/void-invoice.js';
 import { ContextVariables } from './middlewares.js';
 
@@ -121,6 +122,25 @@ export function voidInvoiceController(useCase: VoidInvoiceUseCase) {
     const invoiceId = c.req.param('id') ?? '';
     const body = c.req.valid('json' as never) as { reason: string };
     const result = await useCase.execute(organizationId, invoiceId, {
+      reason: body.reason,
+      userId: c.get('userId'),
+    });
+    return c.json(result, 200);
+  };
+}
+
+export function issueCreditNoteController(useCase: IssueCreditNoteUseCase) {
+  return async (c: Context<{ Variables: ContextVariables }>) => {
+    const organizationId = c.get('organizationId');
+    const invoiceId = c.req.param('id') ?? '';
+    const body = c.req.valid('json' as never) as {
+      establishmentId: string;
+      emissionPointId: string;
+      reason: string;
+    };
+    const result = await useCase.execute(organizationId, invoiceId, {
+      establishmentId: body.establishmentId,
+      emissionPointId: body.emissionPointId,
       reason: body.reason,
       userId: c.get('userId'),
     });

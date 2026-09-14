@@ -50,6 +50,10 @@ export interface InvoiceProps {
   status: InvoiceStatus;
   voidedAt: Date | null;
   voidedReason: string | null;
+  /** Factura original de la que deriva una nota de crédito (comprobante 04). */
+  relatedInvoiceId: string | null;
+  /** Motivo de la nota de crédito (campo `motivo` del SRI, obligatorio). */
+  creditNoteReason: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -63,6 +67,8 @@ export class Invoice {
     documentTypeId: string;
     customerId: string;
     currencyCode: string;
+    relatedInvoiceId?: string;
+    creditNoteReason?: string | null;
   }): Invoice {
     const now = new Date();
     return new Invoice({
@@ -84,6 +90,8 @@ export class Invoice {
       status: 'draft',
       voidedAt: null,
       voidedReason: null,
+      relatedInvoiceId: params.relatedInvoiceId ?? null,
+      creditNoteReason: params.creditNoteReason ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -111,6 +119,8 @@ export class Invoice {
   get status(): InvoiceStatus { return this.props.status; }
   get voidedAt(): Date | null { return this.props.voidedAt; }
   get voidedReason(): string | null { return this.props.voidedReason; }
+  get relatedInvoiceId(): string | null { return this.props.relatedInvoiceId; }
+  get creditNoteReason(): string | null { return this.props.creditNoteReason; }
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
 
