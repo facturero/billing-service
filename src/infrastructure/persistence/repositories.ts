@@ -344,9 +344,14 @@ export class SequelizeOutboxRepository implements OutboxRepository {
 // ── Unit of Work ───────────────────────────────────────────────────────────
 
 export class SequelizeUnitOfWork implements UnitOfWork {
+  constructor(private readonly onCommit?: (tx: Transaction) => void) {}
+
   async execute<T>(fn: (repos: AllRepositories) => Promise<T>): Promise<T> {
     const transaction = await sequelize.transaction();
     try {
+      // El relay publica el outbox justo tras el commit; sin este enganche los
+      // eventos esperan los 30s del timer de respaldo del relay.
+      this.onCommit?.(transaction);
       const result = await fn({
         business: {
           invoices: new SequelizeInvoiceRepository(),

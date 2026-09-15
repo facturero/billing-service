@@ -37,7 +37,8 @@ async function main(): Promise<void> {
   await sequelize.authenticate();
   await sequelize.sync();
 
-  const uow = new SequelizeUnitOfWork();
+  let relay: OutboxRelay | undefined;
+  const uow = new SequelizeUnitOfWork((tx) => relay?.attachToTransaction(tx));
   const invoiceRepo = new SequelizeInvoiceRepository();
   const lineRepo = new SequelizeInvoiceLineRepository();
   const lineTaxRepo = new SequelizeLineTaxRepository();
@@ -68,7 +69,7 @@ async function main(): Promise<void> {
 
   // Outbox Relay
   if (config.RABBITMQ_URL) {
-    const relay = new OutboxRelay({
+    relay = new OutboxRelay({
       sequelize,
       rabbitmqUrl: config.RABBITMQ_URL,
       exchange: 'crm.events',
