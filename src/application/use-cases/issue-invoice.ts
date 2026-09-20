@@ -66,6 +66,36 @@ export async function issueInvoiceInTransaction(
     address: establishment.address,
   });
 
+  // Recálculo y validación de totales ANTES de tomar el lock de secuencia.
+  // Esto solo lee líneas/impuestos ya persistidos del borrador (no depende de
+  // la secuencia) y escribe tax totals en filas propias. Hacerlo aquí —en vez
+  // de dentro de la ventana FOR UPDATE— acorta el hold del lock de la
+  // secuencia al mínimo (folio + persistencia), que es lo que serializa las
+  // emisiones en paralelo de un mismo punto (TEST-PLAN.md #1).
+  const lines = await repos.invoiceLines.findByInvoice(invoiceId);
+  const allTaxes: Array<{ id: string; invoiceLineId: string; taxRateId: string; kind: string; rateSnapshot: string; baseCents: number; amountCents: number; }> = [];
+  for (const line of lines) {
+    const taxes = await repos.lineTaxes.findByInvoiceLine(line.id);
+    allTaxes.push(...taxes);
+  }
+
+  let calculatedSubtotal = 0;
+  let calculatedTaxTotal = 0;
+  for (const l of lines) {
+    calculatedSubtotal = addCents(calculatedSubtotal, l.subtotalCents);
+  }
+  for (const t of allTaxes) {
+    calculatedTaxTotal = addCents(calculatedTaxTotal, t.amountCents);
+  }
+  const calculatedTotal = addCents(calculatedSubtotal, calculatedTaxTotal);
+
+  if (calculatedSubtotal !== invoice.subtotalCents || calculatedTotal !== invoice.totalCents) {
+    throw new MismatchedTotalsError();
+  }
+
+  // Ensure tax totals are up-to-date before issuing
+  await recomputeAndSaveTaxTotals(invoiceId, allTaxes as any, repos);
+
   // Auto-provision sequence if it doesn't exist. El primer SELECT usa
   // `FOR UPDATE` (repo tx-aware): si hay una serie previa, las emisiones en
   // paralelo quedan serializadas sobre la fila y consiguen folios distintos.
@@ -99,30 +129,6 @@ export async function issueInvoiceInTransaction(
   const nextVal = sequence.nextValue();
   const seqFormatted = String(nextVal).padStart(9, '0');
   const number = `${establishment.code}-${emissionPoint.code}-${seqFormatted}`;
-
-  const lines = await repos.invoiceLines.findByInvoice(invoiceId);
-  const allTaxes: Array<{ id: string; invoiceLineId: string; taxRateId: string; kind: string; rateSnapshot: string; baseCents: number; amountCents: number; }> = [];
-  for (const line of lines) {
-    const taxes = await repos.lineTaxes.findByInvoiceLine(line.id);
-    allTaxes.push(...taxes);
-  }
-
-  let calculatedSubtotal = 0;
-  let calculatedTaxTotal = 0;
-  for (const l of lines) {
-    calculatedSubtotal = addCents(calculatedSubtotal, l.subtotalCents);
-  }
-  for (const t of allTaxes) {
-    calculatedTaxTotal = addCents(calculatedTaxTotal, t.amountCents);
-  }
-  const calculatedTotal = addCents(calculatedSubtotal, calculatedTaxTotal);
-
-  if (calculatedSubtotal !== invoice.subtotalCents || calculatedTotal !== invoice.totalCents) {
-    throw new MismatchedTotalsError();
-  }
-
-  // Ensure tax totals are up-to-date before issuing
-  await recomputeAndSaveTaxTotals(invoiceId, allTaxes as any, repos);
 
   // Código SRI del comprobante (01 factura, 04 nota de crédito...): se lo
   // resolvemos al momento de emitir para que el evento indique a fiscal-ecuador
