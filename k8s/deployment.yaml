@@ -114,10 +114,11 @@ spec:
           # Sin límites de CPU/RAM: el fixed-point del ladder es CPU del pod
           # (500m sofocaba a ~16 RPS). Se dejan solo requests para
           # planificación/QoS; el pod puede escalar al CPU disponible del nodo.
-          resources:
-            requests:
-              memory: "128Mi"
-              cpu: "100m"
+          # Sin bloque resources: QoS BestEffort, sin requests ni limits de
+          # CPU/RAM. El ladder que da 16-18 RPS no lo limita la CPU del billing
+          # (usa 2m de 100m: 0.02 de un core) sino la latencia MySQL por insert
+          # (~60ms) => techo teorico 1/0.060 = 16.6 RPS con 1 replica. Se
+          # replica el servicio (ra entonces), no se inventa un limite.
           livenessProbe:
             httpGet:
               path: /health
