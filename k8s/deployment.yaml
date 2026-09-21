@@ -111,13 +111,13 @@ spec:
           # Mismos valores que fiscal-ecuador. Sin límites, un pico de PDFs podía
           # llevarse la memoria del nodo; sin probes, un proceso colgado seguía
           # recibiendo tráfico.
+          # Sin límites de CPU/RAM: el fixed-point del ladder es CPU del pod
+          # (500m sofocaba a ~16 RPS). Se dejan solo requests para
+          # planificación/QoS; el pod puede escalar al CPU disponible del nodo.
           resources:
             requests:
               memory: "128Mi"
               cpu: "100m"
-            limits:
-              memory: "384Mi"
-              cpu: "500m"
           livenessProbe:
             httpGet:
               path: /health
