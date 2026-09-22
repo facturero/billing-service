@@ -25,7 +25,7 @@ function mockOrgCatalog(): OrganizationCatalogPort {
 }
 
 function mockCustomerCatalog(): CustomerCatalogPort {
-  return { findById: vi.fn().mockResolvedValue(customerInfo) };
+  return { findById: vi.fn().mockResolvedValue(customerInfo), findFinalConsumer: vi.fn().mockResolvedValue(null) };
 }
 
 function mockDocumentTypeCatalog(types: DocumentTypeInfo[] = documentTypes): DocumentTypeCatalogPort {
@@ -87,6 +87,9 @@ function makeOriginalInvoice(overrides?: Partial<{ status: string; establishment
     voidedReason: null,
     relatedInvoiceId: null,
     creditNoteReason: null,
+    posTerminalId: null,
+    posSaleId: null,
+    posTotalsDiffCents: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -111,7 +114,7 @@ function mockRepos(original: Invoice, existingSequence: Sequence | null = makeSe
         save: vi.fn(),
         findById: vi.fn(),
         findByIdAndOrganization: vi.fn().mockResolvedValue(original),
-        findByOrganization: vi.fn(),
+        findByOrganization: vi.fn(), findByPosSale: vi.fn().mockResolvedValue(null),
         delete: vi.fn(),
       },
       invoiceLines: {
@@ -259,6 +262,9 @@ describe('IssueCreditNoteUseCase', () => {
       voidedReason: null,
       relatedInvoiceId: null,
       creditNoteReason: null,
+      posTerminalId: null,
+      posSaleId: null,
+      posTotalsDiffCents: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });

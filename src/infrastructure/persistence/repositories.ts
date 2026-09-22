@@ -34,6 +34,13 @@ export class SequelizeInvoiceRepository implements InvoiceRepository {
     return rows.map(mapInvoice);
   }
 
+  async findByPosSale(organizationId: string, posTerminalId: string, posSaleId: string): Promise<Invoice | null> {
+    const row = await InvoiceModel.findOne({
+      where: { organization_id: organizationId, pos_terminal_id: posTerminalId, pos_sale_id: posSaleId },
+    });
+    return row ? mapInvoice(row) : null;
+  }
+
   async save(invoice: Invoice): Promise<void> {
     const p = invoice.toPersistence();
     await InvoiceModel.upsert({
@@ -57,6 +64,9 @@ export class SequelizeInvoiceRepository implements InvoiceRepository {
       voided_reason: p.voidedReason,
       related_invoice_id: p.relatedInvoiceId,
       credit_note_reason: p.creditNoteReason,
+      pos_terminal_id: p.posTerminalId,
+      pos_sale_id: p.posSaleId,
+      pos_totals_diff_cents: p.posTotalsDiffCents,
       created_at: p.createdAt,
       updated_at: p.updatedAt,
     });
@@ -89,6 +99,9 @@ function mapInvoice(row: InvoiceModel): Invoice {
     voidedReason: row.voided_reason,
     relatedInvoiceId: row.related_invoice_id,
     creditNoteReason: row.credit_note_reason,
+    posTerminalId: row.pos_terminal_id,
+    posSaleId: row.pos_sale_id,
+    posTotalsDiffCents: row.pos_totals_diff_cents === null ? null : Number(row.pos_totals_diff_cents),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   });

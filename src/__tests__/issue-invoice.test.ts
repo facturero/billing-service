@@ -19,7 +19,7 @@ function mockOrgCatalog(org: IssuerInfo | null = orgInfo, est: EstablishmentInfo
 }
 
 function mockCustomerCatalog(customer: CustomerInfo | null = customerInfo): CustomerCatalogPort {
-  return { findById: vi.fn().mockResolvedValue(customer) };
+  return { findById: vi.fn().mockResolvedValue(customer), findFinalConsumer: vi.fn().mockResolvedValue(null) };
 }
 
 const documentTypes: DocumentTypeInfo[] = [
@@ -53,6 +53,9 @@ function makeDraftInvoice(overrides?: Partial<{ customerId: string; customerSnap
     voidedReason: null,
     relatedInvoiceId: overrides?.relatedInvoiceId ?? null,
     creditNoteReason: overrides?.creditNoteReason ?? null,
+    posTerminalId: null,
+    posSaleId: null,
+    posTotalsDiffCents: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -65,7 +68,7 @@ function mockUow(repos: AllRepositories): UnitOfWork {
 function mockRepos(invoice: Invoice, existingSequence: Sequence | null = makeSequence()): AllRepositories {
   return {
     business: {
-      invoices: { save: vi.fn(), findById: vi.fn(), findByIdAndOrganization: vi.fn().mockResolvedValue(invoice), findByOrganization: vi.fn(), delete: vi.fn() },
+      invoices: { save: vi.fn(), findById: vi.fn(), findByIdAndOrganization: vi.fn().mockResolvedValue(invoice), findByOrganization: vi.fn(), findByPosSale: vi.fn().mockResolvedValue(null), delete: vi.fn() },
       invoiceLines: { findByInvoice: vi.fn().mockResolvedValue([]), findById: vi.fn(), save: vi.fn(), delete: vi.fn() },
       lineTaxes: { findByInvoiceLine: vi.fn().mockResolvedValue([]), findByInvoice: vi.fn().mockResolvedValue([]), save: vi.fn(), deleteByInvoiceLine: vi.fn(), deleteByInvoice: vi.fn() },
       invoiceTaxTotals: { findByInvoice: vi.fn().mockResolvedValue([]), save: vi.fn(), deleteByInvoice: vi.fn() },

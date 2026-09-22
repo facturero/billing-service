@@ -54,6 +54,12 @@ export interface InvoiceProps {
   relatedInvoiceId: string | null;
   /** Motivo de la nota de crédito (campo `motivo` del SRI, obligatorio). */
   creditNoteReason: string | null;
+  /** Terminal POS del que vino la venta; null en las facturas hechas desde el CRM. */
+  posTerminalId: string | null;
+  /** Id de la venta en la base local de ese terminal. Junto al terminal, la clave de idempotencia. */
+  posSaleId: string | null;
+  /** Diferencia entre el total que calculó el terminal y el que recalculó billing. */
+  posTotalsDiffCents: number | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -69,6 +75,8 @@ export class Invoice {
     currencyCode: string;
     relatedInvoiceId?: string;
     creditNoteReason?: string | null;
+    posTerminalId?: string | null;
+    posSaleId?: string | null;
   }): Invoice {
     const now = new Date();
     return new Invoice({
@@ -92,6 +100,9 @@ export class Invoice {
       voidedReason: null,
       relatedInvoiceId: params.relatedInvoiceId ?? null,
       creditNoteReason: params.creditNoteReason ?? null,
+      posTerminalId: params.posTerminalId ?? null,
+      posSaleId: params.posSaleId ?? null,
+      posTotalsDiffCents: null,
       createdAt: now,
       updatedAt: now,
     });
@@ -121,6 +132,9 @@ export class Invoice {
   get voidedReason(): string | null { return this.props.voidedReason; }
   get relatedInvoiceId(): string | null { return this.props.relatedInvoiceId; }
   get creditNoteReason(): string | null { return this.props.creditNoteReason; }
+  get posTerminalId(): string | null { return this.props.posTerminalId; }
+  get posSaleId(): string | null { return this.props.posSaleId; }
+  get posTotalsDiffCents(): number | null { return this.props.posTotalsDiffCents; }
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
 
@@ -137,6 +151,16 @@ export class Invoice {
   setIssuerSnapshot(snapshot: IssuerSnapshot): void {
     if (this.props.status !== 'draft') return;
     this.props.issuerSnapshot = snapshot;
+    this.props.updatedAt = new Date();
+  }
+
+  /**
+   * Deja anotado cuánto se desvió el total del terminal respecto al que
+   * calcula billing. No corrige nada: la factura vale por lo recalculado, y
+   * esto es la huella para auditar por qué no coincidían.
+   */
+  setPosTotalsDiff(diffCents: number): void {
+    this.props.posTotalsDiffCents = diffCents;
     this.props.updatedAt = new Date();
   }
 

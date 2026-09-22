@@ -29,6 +29,29 @@ export interface IssueInvoiceInput {
   userId?: string;
 }
 
+export interface PosSaleLineInput {
+  productId: string;
+  description?: string;
+  quantity: number;
+  unitPrice: string;
+  discountCents?: number;
+}
+
+export interface IngestPosSaleInput {
+  /** Terminal que vendió, y la venta en SU base local: juntos son la clave de idempotencia. */
+  terminalId: string;
+  posSaleId: string;
+  establishmentId: string;
+  emissionPointId: string;
+  /** Cliente del CRM si la caja lo pidió; sin él se factura a CONSUMIDOR FINAL. */
+  customerId?: string | null;
+  currencyCode?: string;
+  /** Total que calculó el terminal, en centavos, solo para contrastarlo con el recalculado. */
+  posTotalCents?: number;
+  userId?: string;
+  lines: PosSaleLineInput[];
+}
+
 export interface VoidInvoiceInput {
   reason: string;
   /** Usuario que anula (X-User-Id). Ver IssueInvoiceInput.userId. */
@@ -96,6 +119,10 @@ export interface InvoiceDetailDTO {
   status: string;
   voidedAt: string | null;
   voidedReason: string | null;
+  /** Origen de la factura cuando vino de una caja: terminal, venta local y desvío de totales. */
+  posTerminalId: string | null;
+  posSaleId: string | null;
+  posTotalsDiffCents: number | null;
   lines: InvoiceLineDTO[];
   taxTotals: InvoiceTaxTotalDTO[];
   createdAt: string;

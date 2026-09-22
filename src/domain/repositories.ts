@@ -4,6 +4,8 @@ export interface InvoiceRepository {
   findById(id: string): Promise<Invoice | null>;
   findByIdAndOrganization(id: string, organizationId: string): Promise<Invoice | null>;
   findByOrganization(organizationId: string, params?: { status?: string; customerId?: string; from?: string; to?: string }): Promise<Invoice[]>;
+  /** La venta de un terminal ya ingresada, si existe: es la idempotencia de la ingesta del POS. */
+  findByPosSale(organizationId: string, posTerminalId: string, posSaleId: string): Promise<Invoice | null>;
   save(invoice: Invoice): Promise<void>;
   delete(id: string): Promise<void>;
 }

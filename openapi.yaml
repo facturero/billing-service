@@ -134,6 +134,65 @@ paths:
         '200':
           description: Línea removida
 
+  /invoices/from-pos:
+    post:
+      summary: Ingesta de una venta del POS (crea la factura y la emite)
+      description: >
+        Convierte una venta de caja en una factura ya emitida: la numera con la
+        secuencia del punto de emisión del terminal, descuenta stock (vía evento)
+        y la manda al SRI. Es idempotente por (terminalId, posSaleId): un
+        reintento devuelve 200 con la misma factura en vez de crear otra.
+        Los totales se recalculan desde el catálogo; si no coinciden con los del
+        terminal, la diferencia queda en posTotalsDiffCents.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                terminalId:
+                  type: string
+                  description: Identidad estable del equipo (deviceId del POS)
+                posSaleId:
+                  type: string
+                  description: Id de la venta en la base local del terminal
+                establishmentId:
+                  type: string
+                emissionPointId:
+                  type: string
+                customerId:
+                  type: string
+                  nullable: true
+                  description: Sin él se factura a CONSUMIDOR FINAL
+                currencyCode:
+                  type: string
+                posTotalCents:
+                  type: integer
+                lines:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    properties:
+                      productId:
+                        type: string
+                      description:
+                        type: string
+                      quantity:
+                        type: number
+                      unitPrice:
+                        type: string
+                      discountCents:
+                        type: integer
+                    required: [productId, quantity, unitPrice]
+              required: [terminalId, posSaleId, establishmentId, emissionPointId, lines]
+      responses:
+        '200':
+          description: La venta ya estaba ingresada; se devuelve la misma factura
+        '201':
+          description: Factura creada y emitida
+
   /invoices/{id}/issue:
     post:
       summary: Emitir factura (asigna secuencial)

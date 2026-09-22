@@ -6,6 +6,7 @@ import { UpdateInvoiceUseCase } from '../../application/use-cases/update-invoice
 import { AddLineUseCase } from '../../application/use-cases/add-line.js';
 import { RemoveLineUseCase } from '../../application/use-cases/remove-line.js';
 import { IssueInvoiceUseCase } from '../../application/use-cases/issue-invoice.js';
+import { IngestPosSaleUseCase } from '../../application/use-cases/ingest-pos-sale.js';
 import { IssueCreditNoteUseCase } from '../../application/use-cases/issue-credit-note.js';
 import { VoidInvoiceUseCase } from '../../application/use-cases/void-invoice.js';
 import {
@@ -16,6 +17,7 @@ import {
   addLineController,
   removeLineController,
   issueInvoiceController,
+  ingestPosSaleController,
   issueCreditNoteController,
   voidInvoiceController,
 } from './controllers.js';
@@ -24,6 +26,7 @@ import {
   updateInvoiceSchema,
   addLineSchema,
   issueInvoiceSchema,
+  ingestPosSaleSchema,
   creditNoteSchema,
   voidInvoiceSchema,
   validateJson,
@@ -41,6 +44,7 @@ export interface AppDependencies {
     addLine: AddLineUseCase;
     removeLine: RemoveLineUseCase;
     issueInvoice: IssueInvoiceUseCase;
+    ingestPosSale: IngestPosSaleUseCase;
     issueCreditNote: IssueCreditNoteUseCase;
     voidInvoice: VoidInvoiceUseCase;
   };
@@ -89,6 +93,15 @@ export function invoiceRoutes(deps: AppDependencies): Hono<Vars> {
     requireOrganization(),
     requirePermission('invoice:update'),
     removeLineController(useCases.removeLine));
+
+  // El POS sube una venta ya cobrada y billing la convierte en factura emitida:
+  // por eso pide los dos permisos, crear y emitir.
+  r.post('/invoices/from-pos',
+    requireOrganization(),
+    requirePermission('invoice:create'),
+    requirePermission('invoice:issue'),
+    validateJson(ingestPosSaleSchema),
+    ingestPosSaleController(useCases.ingestPosSale));
 
   r.post('/invoices/:id/issue',
     requireOrganization(),

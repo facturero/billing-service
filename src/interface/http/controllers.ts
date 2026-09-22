@@ -6,6 +6,8 @@ import { UpdateInvoiceUseCase } from '../../application/use-cases/update-invoice
 import { AddLineUseCase } from '../../application/use-cases/add-line.js';
 import { RemoveLineUseCase } from '../../application/use-cases/remove-line.js';
 import { IssueInvoiceUseCase } from '../../application/use-cases/issue-invoice.js';
+import { IngestPosSaleUseCase } from '../../application/use-cases/ingest-pos-sale.js';
+import type { IngestPosSaleInput } from '../../application/dts.js';
 import { IssueCreditNoteUseCase } from '../../application/use-cases/issue-credit-note.js';
 import { VoidInvoiceUseCase } from '../../application/use-cases/void-invoice.js';
 import { ContextVariables } from './middlewares.js';
@@ -113,6 +115,25 @@ export function issueInvoiceController(useCase: IssueInvoiceUseCase) {
       userId: c.get('userId'),
     });
     return c.json(result, 200);
+  };
+}
+
+/**
+ * Ingesta de una venta del POS. Responde 201 cuando crea la factura y 200
+ * cuando la venta ya estaba ingresada (el terminal reintentó): en los dos
+ * casos el cuerpo es la misma factura, que es lo único que el POS necesita
+ * para darla por subida.
+ */
+export function ingestPosSaleController(useCase: IngestPosSaleUseCase) {
+  return async (c: Context<{ Variables: ContextVariables }>) => {
+    const organizationId = c.get('organizationId');
+    const countryCode = c.get('countryCode') || 'EC';
+    const body = c.req.valid('json' as never) as IngestPosSaleInput;
+    const { invoice, alreadyIngested } = await useCase.execute(organizationId, countryCode, {
+      ...body,
+      userId: c.get('userId'),
+    });
+    return c.json(invoice, alreadyIngested ? 200 : 201);
   };
 }
 

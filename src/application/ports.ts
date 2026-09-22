@@ -109,6 +109,12 @@ export interface CustomerInfo {
 
 export interface CustomerCatalogPort {
   findById(organizationId: string, customerId: string): Promise<CustomerInfo | null>;
+  /**
+   * El cliente de sistema CONSUMIDOR FINAL de la organización, que customer-service
+   * crea solo al darla de alta. Es a quien se factura una venta de mostrador: en
+   * caja lo normal es que el comprador no dé sus datos. `null` si no existe.
+   */
+  findFinalConsumer(organizationId: string): Promise<CustomerInfo | null>;
 }
 
 // ── Document Storage (server-to-server upload) ──────────────────────────

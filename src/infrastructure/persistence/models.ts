@@ -27,6 +27,9 @@ export class InvoiceModel extends Model<
   declare voided_reason: string | null;
   declare related_invoice_id: string | null;
   declare credit_note_reason: string | null;
+  declare pos_terminal_id: string | null;
+  declare pos_sale_id: string | null;
+  declare pos_totals_diff_cents: number | null;
   declare created_at: Date;
   declare updated_at: Date;
 }
@@ -53,6 +56,9 @@ InvoiceModel.init(
     voided_reason: { type: DataTypes.STRING(255), allowNull: true },
     related_invoice_id: { type: DataTypes.CHAR(36), allowNull: true },
     credit_note_reason: { type: DataTypes.STRING(300), allowNull: true },
+    pos_terminal_id: { type: DataTypes.STRING(64), allowNull: true },
+    pos_sale_id: { type: DataTypes.STRING(64), allowNull: true },
+    pos_totals_diff_cents: { type: DataTypes.BIGINT, allowNull: true },
     created_at: DataTypes.DATE,
     updated_at: DataTypes.DATE,
   },

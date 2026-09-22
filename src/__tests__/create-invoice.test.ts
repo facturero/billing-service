@@ -7,7 +7,7 @@ import type { AllRepositories } from '../domain/repositories.js';
 function mockRepos(): AllRepositories {
   return {
     business: {
-      invoices: { save: vi.fn(), findById: vi.fn(), findByIdAndOrganization: vi.fn(), findByOrganization: vi.fn(), delete: vi.fn() },
+      invoices: { save: vi.fn(), findById: vi.fn(), findByIdAndOrganization: vi.fn(), findByOrganization: vi.fn(), findByPosSale: vi.fn().mockResolvedValue(null), delete: vi.fn() },
       invoiceLines: { findByInvoice: vi.fn().mockResolvedValue([]), findById: vi.fn(), save: vi.fn(), delete: vi.fn() },
       lineTaxes: { findByInvoiceLine: vi.fn().mockResolvedValue([]), findByInvoice: vi.fn().mockResolvedValue([]), save: vi.fn(), deleteByInvoiceLine: vi.fn(), deleteByInvoice: vi.fn() },
       invoiceTaxTotals: { findByInvoice: vi.fn().mockResolvedValue([]), save: vi.fn(), deleteByInvoice: vi.fn() },
@@ -18,7 +18,7 @@ function mockRepos(): AllRepositories {
 }
 
 function mockCustomerCatalog(customer: CustomerInfo | null): CustomerCatalogPort {
-  return { findById: vi.fn().mockResolvedValue(customer) };
+  return { findById: vi.fn().mockResolvedValue(customer), findFinalConsumer: vi.fn().mockResolvedValue(null) };
 }
 
 function mockUow(repos: AllRepositories): UnitOfWork {

@@ -27,6 +27,9 @@ function makeDraftInvoice(): Invoice {
     voidedReason: null,
     relatedInvoiceId: null,
     creditNoteReason: null,
+    posTerminalId: null,
+    posSaleId: null,
+    posTotalsDiffCents: null,
     createdAt: new Date(),
     updatedAt: new Date(),
   });
@@ -59,7 +62,7 @@ function mockRepos(invoice: Invoice): AllRepositories & { _savedLines: any[] } {
   return {
     _savedLines: savedLines,
     business: {
-      invoices: { save: vi.fn(), findById: vi.fn(), findByIdAndOrganization: vi.fn().mockResolvedValue(invoice), findByOrganization: vi.fn(), delete: vi.fn() },
+      invoices: { save: vi.fn(), findById: vi.fn(), findByIdAndOrganization: vi.fn().mockResolvedValue(invoice), findByOrganization: vi.fn(), findByPosSale: vi.fn().mockResolvedValue(null), delete: vi.fn() },
       invoiceLines: {
         findByInvoice: vi.fn().mockImplementation(() => Promise.resolve(savedLines)),
         findById: vi.fn(),

@@ -32,6 +32,26 @@ export const creditNoteSchema = z.object({
   reason: z.string().min(1).max(300),
 });
 
+// Ingesta de una venta del POS. `posSaleId` es el id de la venta en la base
+// local del terminal (Prisma lo genera como entero autoincremental), por eso
+// es texto libre y no un uuid.
+export const ingestPosSaleSchema = z.object({
+  terminalId: z.string().min(1).max(64),
+  posSaleId: z.string().min(1).max(64),
+  establishmentId: z.string().uuid(),
+  emissionPointId: z.string().uuid(),
+  customerId: z.string().uuid().nullable().optional(),
+  currencyCode: z.string().length(3).optional(),
+  posTotalCents: z.number().int().optional(),
+  lines: z.array(z.object({
+    productId: z.string().uuid(),
+    description: z.string().max(255).optional(),
+    quantity: z.number().positive(),
+    unitPrice: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Precio inválido'),
+    discountCents: z.number().int().min(0).optional(),
+  })).min(1),
+});
+
 export const voidInvoiceSchema = z.object({
   reason: z.string().min(1).max(255),
 });
