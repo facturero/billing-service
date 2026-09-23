@@ -11,13 +11,15 @@ import { InvoiceModel, InvoiceLineModel, LineTaxModel, InvoiceTaxTotalModel, Seq
 // ── Invoice Repository ─────────────────────────────────────────────────────
 
 export class SequelizeInvoiceRepository implements InvoiceRepository {
+  constructor(private readonly tx?: Transaction) {}
+
   async findById(id: string): Promise<Invoice | null> {
-    const row = await InvoiceModel.findByPk(id);
+    const row = await InvoiceModel.findByPk(id, { transaction: this.tx });
     return row ? mapInvoice(row) : null;
   }
 
   async findByIdAndOrganization(id: string, organizationId: string): Promise<Invoice | null> {
-    const row = await InvoiceModel.findOne({ where: { id, organization_id: organizationId } });
+    const row = await InvoiceModel.findOne({ where: { id, organization_id: organizationId }, transaction: this.tx });
     return row ? mapInvoice(row) : null;
   }
 
@@ -30,13 +32,14 @@ export class SequelizeInvoiceRepository implements InvoiceRepository {
       if (params.from) where.issue_date[Op.gte] = new Date(params.from);
       if (params.to) where.issue_date[Op.lte] = new Date(params.to);
     }
-    const rows = await InvoiceModel.findAll({ where, order: [['created_at', 'DESC']] });
+    const rows = await InvoiceModel.findAll({ where, order: [['created_at', 'DESC']], transaction: this.tx });
     return rows.map(mapInvoice);
   }
 
   async findByPosSale(organizationId: string, posTerminalId: string, posSaleId: string): Promise<Invoice | null> {
     const row = await InvoiceModel.findOne({
       where: { organization_id: organizationId, pos_terminal_id: posTerminalId, pos_sale_id: posSaleId },
+      transaction: this.tx,
     });
     return row ? mapInvoice(row) : null;
   }
@@ -69,11 +72,11 @@ export class SequelizeInvoiceRepository implements InvoiceRepository {
       pos_totals_diff_cents: p.posTotalsDiffCents,
       created_at: p.createdAt,
       updated_at: p.updatedAt,
-    });
+    }, { transaction: this.tx });
   }
 
   async delete(id: string): Promise<void> {
-    await InvoiceModel.destroy({ where: { id } });
+    await InvoiceModel.destroy({ where: { id }, transaction: this.tx });
   }
 }
 
@@ -110,13 +113,15 @@ function mapInvoice(row: InvoiceModel): Invoice {
 // ── Invoice Line Repository ────────────────────────────────────────────────
 
 export class SequelizeInvoiceLineRepository implements InvoiceLineRepository {
+  constructor(private readonly tx?: Transaction) {}
+
   async findByInvoice(invoiceId: string): Promise<InvoiceLine[]> {
-    const rows = await InvoiceLineModel.findAll({ where: { invoice_id: invoiceId } });
+    const rows = await InvoiceLineModel.findAll({ where: { invoice_id: invoiceId }, transaction: this.tx });
     return rows.map(mapInvoiceLine);
   }
 
   async findById(id: string): Promise<InvoiceLine | null> {
-    const row = await InvoiceLineModel.findByPk(id);
+    const row = await InvoiceLineModel.findByPk(id, { transaction: this.tx });
     return row ? mapInvoiceLine(row) : null;
   }
 
@@ -132,11 +137,11 @@ export class SequelizeInvoiceLineRepository implements InvoiceLineRepository {
       unit_price_cents: p.unitPriceCents,
       discount_cents: p.discountCents,
       subtotal_cents: p.subtotalCents,
-    });
+    }, { transaction: this.tx });
   }
 
   async delete(id: string): Promise<void> {
-    await InvoiceLineModel.destroy({ where: { id } });
+    await InvoiceLineModel.destroy({ where: { id }, transaction: this.tx });
   }
 }
 
@@ -157,16 +162,18 @@ function mapInvoiceLine(row: InvoiceLineModel): InvoiceLine {
 // ── Line Tax Repository ────────────────────────────────────────────────────
 
 export class SequelizeLineTaxRepository implements LineTaxRepository {
+  constructor(private readonly tx?: Transaction) {}
+
   async findByInvoiceLine(invoiceLineId: string): Promise<LineTax[]> {
-    const rows = await LineTaxModel.findAll({ where: { invoice_line_id: invoiceLineId } });
+    const rows = await LineTaxModel.findAll({ where: { invoice_line_id: invoiceLineId }, transaction: this.tx });
     return rows.map(mapLineTax);
   }
 
   async findByInvoice(invoiceId: string): Promise<LineTax[]> {
-    const lines = await InvoiceLineModel.findAll({ where: { invoice_id: invoiceId } });
+    const lines = await InvoiceLineModel.findAll({ where: { invoice_id: invoiceId }, transaction: this.tx });
     if (lines.length === 0) return [];
     const lineIds = lines.map(l => l.id);
-    const rows = await LineTaxModel.findAll({ where: { invoice_line_id: lineIds } });
+    const rows = await LineTaxModel.findAll({ where: { invoice_line_id: lineIds }, transaction: this.tx });
     return rows.map(mapLineTax);
   }
 
@@ -180,17 +187,17 @@ export class SequelizeLineTaxRepository implements LineTaxRepository {
       rate_snapshot: p.rateSnapshot,
       base_cents: p.baseCents,
       amount_cents: p.amountCents,
-    });
+    }, { transaction: this.tx });
   }
 
   async deleteByInvoiceLine(invoiceLineId: string): Promise<void> {
-    await LineTaxModel.destroy({ where: { invoice_line_id: invoiceLineId } });
+    await LineTaxModel.destroy({ where: { invoice_line_id: invoiceLineId }, transaction: this.tx });
   }
 
   async deleteByInvoice(invoiceId: string): Promise<void> {
-    const lines = await InvoiceLineModel.findAll({ where: { invoice_id: invoiceId } });
+    const lines = await InvoiceLineModel.findAll({ where: { invoice_id: invoiceId }, transaction: this.tx });
     for (const line of lines) {
-      await LineTaxModel.destroy({ where: { invoice_line_id: line.id } });
+      await LineTaxModel.destroy({ where: { invoice_line_id: line.id }, transaction: this.tx });
     }
   }
 }
@@ -210,8 +217,10 @@ function mapLineTax(row: LineTaxModel): LineTax {
 // ── Invoice Tax Total Repository ───────────────────────────────────────────
 
 export class SequelizeInvoiceTaxTotalRepository implements InvoiceTaxTotalRepository {
+  constructor(private readonly tx?: Transaction) {}
+
   async findByInvoice(invoiceId: string): Promise<InvoiceTaxTotal[]> {
-    const rows = await InvoiceTaxTotalModel.findAll({ where: { invoice_id: invoiceId } });
+    const rows = await InvoiceTaxTotalModel.findAll({ where: { invoice_id: invoiceId }, transaction: this.tx });
     return rows.map(r => InvoiceTaxTotal.fromPersistence({
       id: r.id,
       invoiceId: r.invoice_id,
@@ -231,11 +240,11 @@ export class SequelizeInvoiceTaxTotalRepository implements InvoiceTaxTotalReposi
       rate_snapshot: p.rateSnapshot,
       base_cents: p.baseCents,
       amount_cents: p.amountCents,
-    });
+    }, { transaction: this.tx });
   }
 
   async deleteByInvoice(invoiceId: string): Promise<void> {
-    await InvoiceTaxTotalModel.destroy({ where: { invoice_id: invoiceId } });
+    await InvoiceTaxTotalModel.destroy({ where: { invoice_id: invoiceId }, transaction: this.tx });
   }
 }
 
@@ -367,10 +376,10 @@ export class SequelizeUnitOfWork implements UnitOfWork {
       this.onCommit?.(transaction);
       const result = await fn({
         business: {
-          invoices: new SequelizeInvoiceRepository(),
-          invoiceLines: new SequelizeInvoiceLineRepository(),
-          lineTaxes: new SequelizeLineTaxRepository(),
-          invoiceTaxTotals: new SequelizeInvoiceTaxTotalRepository(),
+          invoices: new SequelizeInvoiceRepository(transaction),
+          invoiceLines: new SequelizeInvoiceLineRepository(transaction),
+          lineTaxes: new SequelizeLineTaxRepository(transaction),
+          invoiceTaxTotals: new SequelizeInvoiceTaxTotalRepository(transaction),
           sequences: new SequelizeSequenceRepository(transaction),
           outbox: new SequelizeOutboxRepository(transaction),
         },
