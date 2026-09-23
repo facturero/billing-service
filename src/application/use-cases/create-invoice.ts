@@ -12,11 +12,14 @@ export class CreateInvoiceUseCase {
   ) {}
 
   async execute(input: CreateInvoiceInput & { organizationId: string; countryCode: string }): Promise<InvoiceDetailDTO> {
-    return this.uow.execute(async (repos) => {
-      const customerInfo = await this.customerCatalog.findById(input.organizationId, input.customerId);
-      if (!customerInfo) throw new CustomerNotFoundError();
-      if (customerInfo.status !== 'active') throw new CustomerDisabledError();
+    // La consulta a customer-service va ANTES de abrir la transaccion: si no, cada
+    // peticion retiene una conexion del pool (max 40) mientras espera la red, y con
+    // ~40 concurrentes el pool se agota aunque MySQL y la CPU esten ociosos.
+    const customerInfo = await this.customerCatalog.findById(input.organizationId, input.customerId);
+    if (!customerInfo) throw new CustomerNotFoundError();
+    if (customerInfo.status !== 'active') throw new CustomerDisabledError();
 
+    return this.uow.execute(async (repos) => {
       const snapshot: CustomerSnapshot = {
         id: customerInfo.id,
         businessName: customerInfo.businessName,
