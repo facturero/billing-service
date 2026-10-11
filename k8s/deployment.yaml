@@ -108,6 +108,10 @@ spec:
                 secretKeyRef:
                   name: internal-service-secret
                   key: value
+            - name: OTEL_SERVICE_NAME
+              value: "billing-service"
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: "http://otel-collector.observability.svc.cluster.local:4318"
           # Mismos valores que fiscal-ecuador. Sin límites, un pico de PDFs podía
           # llevarse la memoria del nodo; sin probes, un proceso colgado seguía
           # recibiendo tráfico.
