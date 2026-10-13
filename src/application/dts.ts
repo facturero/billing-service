@@ -45,6 +45,8 @@ export interface IngestPosSaleInput {
   emissionPointId: string;
   /** Cliente del CRM si la caja lo pidió; sin él se factura a CONSUMIDOR FINAL. */
   customerId?: string | null;
+  /** Forma de pago SRI (Tabla 24) con la que se cobró; sin ella fiscal usa su valor por defecto. */
+  paymentMethodCode?: string;
   currencyCode?: string;
   /** Total que calculó el terminal, en centavos, solo para contrastarlo con el recalculado. */
   posTotalCents?: number;
@@ -123,6 +125,7 @@ export interface InvoiceDetailDTO {
   posTerminalId: string | null;
   posSaleId: string | null;
   posTotalsDiffCents: number | null;
+  paymentMethodCode: string | null;
   lines: InvoiceLineDTO[];
   taxTotals: InvoiceTaxTotalDTO[];
   createdAt: string;

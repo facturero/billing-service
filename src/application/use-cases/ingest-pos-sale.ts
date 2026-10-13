@@ -122,6 +122,7 @@ export class IngestPosSaleUseCase {
         currencyCode: input.currencyCode ?? 'USD',
         posTerminalId: input.terminalId,
         posSaleId: input.posSaleId,
+        paymentMethodCode: input.paymentMethodCode ?? null,
       });
 
       const snapshot: CustomerSnapshot = {

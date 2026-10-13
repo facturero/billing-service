@@ -70,6 +70,7 @@ export class SequelizeInvoiceRepository implements InvoiceRepository {
       pos_terminal_id: p.posTerminalId,
       pos_sale_id: p.posSaleId,
       pos_totals_diff_cents: p.posTotalsDiffCents,
+      payment_method_code: p.paymentMethodCode,
       created_at: p.createdAt,
       updated_at: p.updatedAt,
     }, { transaction: this.tx });
@@ -105,6 +106,7 @@ function mapInvoice(row: InvoiceModel): Invoice {
     posTerminalId: row.pos_terminal_id,
     posSaleId: row.pos_sale_id,
     posTotalsDiffCents: row.pos_totals_diff_cents === null ? null : Number(row.pos_totals_diff_cents),
+    paymentMethodCode: row.payment_method_code ?? null,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
   });

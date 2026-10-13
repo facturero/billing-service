@@ -60,6 +60,8 @@ export interface InvoiceProps {
   posSaleId: string | null;
   /** Diferencia entre el total que calculó el terminal y el que recalculó billing. */
   posTotalsDiffCents: number | null;
+  /** Forma de pago SRI (Tabla 24) con la que se cobró; null = no indicada (fiscal usa su valor por defecto). */
+  paymentMethodCode?: string | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -77,6 +79,7 @@ export class Invoice {
     creditNoteReason?: string | null;
     posTerminalId?: string | null;
     posSaleId?: string | null;
+    paymentMethodCode?: string | null;
   }): Invoice {
     const now = new Date();
     return new Invoice({
@@ -103,6 +106,7 @@ export class Invoice {
       posTerminalId: params.posTerminalId ?? null,
       posSaleId: params.posSaleId ?? null,
       posTotalsDiffCents: null,
+      paymentMethodCode: params.paymentMethodCode ?? null,
       createdAt: now,
       updatedAt: now,
     });
@@ -135,6 +139,7 @@ export class Invoice {
   get posTerminalId(): string | null { return this.props.posTerminalId; }
   get posSaleId(): string | null { return this.props.posSaleId; }
   get posTotalsDiffCents(): number | null { return this.props.posTotalsDiffCents; }
+  get paymentMethodCode(): string | null { return this.props.paymentMethodCode ?? null; }
   get createdAt(): Date { return this.props.createdAt; }
   get updatedAt(): Date { return this.props.updatedAt; }
 

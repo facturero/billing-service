@@ -98,6 +98,7 @@ export function invoiceToDetailDTO(
     posTerminalId: invoice.posTerminalId,
     posSaleId: invoice.posSaleId,
     posTotalsDiffCents: invoice.posTotalsDiffCents,
+    paymentMethodCode: invoice.paymentMethodCode,
     lines: linesWithTaxes,
     taxTotals: taxTotals,
     createdAt: invoice.createdAt.toISOString(),

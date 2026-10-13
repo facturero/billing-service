@@ -41,6 +41,9 @@ export const ingestPosSaleSchema = z.object({
   establishmentId: z.string().uuid(),
   emissionPointId: z.string().uuid(),
   customerId: z.string().uuid().nullable().optional(),
+  // Tabla 24 del SRI: 01 sin utilización del sistema financiero (efectivo), 15 compensación de deudas, 16 débito, 17 dinero
+  // electrónico, 18 prepago, 19 crédito, 20 otros con utilización del sistema financiero, 21 endoso de títulos.
+  paymentMethodCode: z.enum(['01', '15', '16', '17', '18', '19', '20', '21']).optional(),
   currencyCode: z.string().length(3).optional(),
   posTotalCents: z.number().int().optional(),
   lines: z.array(z.object({

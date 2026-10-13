@@ -30,6 +30,7 @@ export class InvoiceModel extends Model<
   declare pos_terminal_id: string | null;
   declare pos_sale_id: string | null;
   declare pos_totals_diff_cents: number | null;
+  declare payment_method_code: string | null;
   declare created_at: Date;
   declare updated_at: Date;
 }
@@ -59,6 +60,7 @@ InvoiceModel.init(
     pos_terminal_id: { type: DataTypes.STRING(64), allowNull: true },
     pos_sale_id: { type: DataTypes.STRING(64), allowNull: true },
     pos_totals_diff_cents: { type: DataTypes.BIGINT, allowNull: true },
+    payment_method_code: { type: DataTypes.CHAR(2), allowNull: true },
     created_at: DataTypes.DATE,
     updated_at: DataTypes.DATE,
   },

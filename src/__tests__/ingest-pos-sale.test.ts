@@ -8,6 +8,7 @@ import type {
   CustomerInfo, DocumentTypeInfo, ProductCatalogInfo,
 } from '../application/ports.js';
 import type { AllRepositories } from '../domain/repositories.js';
+import { ingestPosSaleSchema } from '../interface/http/validators.js';
 
 const orgInfo: IssuerInfo = { legalName: 'Mi Empresa', tradeName: 'ME', taxId: '1234567890' };
 const establishmentInfo: EstablishmentInfo = { id: 'est-1', code: '001', name: 'Matriz', address: 'Dir', status: 'active' };
@@ -137,6 +138,43 @@ describe('IngestPosSaleUseCase', () => {
     expect(invoice.subtotalCents).toBe(178);
     expect(invoice.totalCents).toBe(199);
     expect(repos.business.outbox.add).toHaveBeenCalled();
+  });
+
+  describe('forma de pago', () => {
+    const eventoEmitido = (repos: ReturnType<typeof mockRepos>) =>
+      (repos.business.outbox.add as ReturnType<typeof vi.fn>).mock.calls.map((c) => c[0]).find((e) => e.type === 'billing.invoice.issued');
+
+    it('la forma de pago con la que se cobró se guarda y viaja en el evento de emisión (fiscal la manda al SRI)', async () => {
+      const repos = mockRepos();
+      const { useCase } = makeUseCase(repos);
+
+      const { invoice } = await useCase.execute('org-1', 'EC', { ...sale, paymentMethodCode: '16' });
+
+      expect(invoice.paymentMethodCode).toBe('16');
+      expect(eventoEmitido(repos).payload.paymentMethodCode).toBe('16');
+    });
+
+    it('sin forma de pago el evento no la trae: fiscal usa su valor por defecto y nada cambia para las facturas de siempre', async () => {
+      const repos = mockRepos();
+      const { useCase } = makeUseCase(repos);
+
+      const { invoice } = await useCase.execute('org-1', 'EC', sale);
+
+      expect(invoice.paymentMethodCode).toBeNull();
+      expect('paymentMethodCode' in eventoEmitido(repos).payload).toBe(false);
+    });
+
+    it('el esquema solo acepta códigos de la Tabla 24 del SRI', () => {
+      const base = { ...sale, establishmentId: '6f9619ff-8b86-4d11-b42d-00c04fc964ff', emissionPointId: '6f9619ff-8b86-4d11-b42d-00c04fc964ff' };
+      const linea = { productId: '6f9619ff-8b86-4d11-b42d-00c04fc964ff', quantity: 1, unitPrice: '1.00' };
+      for (const codigo of ['01', '16', '19', '20']) {
+        expect(ingestPosSaleSchema.safeParse({ ...base, lines: [linea], paymentMethodCode: codigo }).success, codigo).toBe(true);
+      }
+      for (const codigo of ['00', '99', '1', 'EFECTIVO', '']) {
+        expect(ingestPosSaleSchema.safeParse({ ...base, lines: [linea], paymentMethodCode: codigo }).success, codigo).toBe(false);
+      }
+      expect(ingestPosSaleSchema.safeParse({ ...base, lines: [linea] }).success).toBe(true);
+    });
   });
 
   it('sin cliente factura al CONSUMIDOR FINAL de la organización', async () => {

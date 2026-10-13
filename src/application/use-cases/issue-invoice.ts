@@ -187,6 +187,8 @@ export async function issueInvoiceInTransaction(
       taxTotalCents: invoice.taxTotalCents,
       totalCents: invoice.totalCents,
       currencyCode: invoice.currencyCode,
+      // Forma de pago SRI con la que se cobró (la caja web la elige). Sin ella fiscal-ecuador usa su valor por defecto («01»).
+      ...(invoice.paymentMethodCode ? { paymentMethodCode: invoice.paymentMethodCode } : {}),
       lines: lines.map(l => ({
         productId: l.productId,
         // El SKU va al codigoPrincipal del SRI; el UUID interno no cabe (máx. 25).
