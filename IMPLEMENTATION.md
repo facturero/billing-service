@@ -46,3 +46,7 @@ src/
 - `invoice:issue` — issue (assign sequential)
 - `invoice:void` — void issued invoices
 - `invoice:authorize` — (Fase 2, fiscal authorization)
+
+## Nota de débito (Fase 1.4 del plan ERP)
+
+`POST /invoices/:id/debit-note` (permiso `invoice:issue`): cobra cargos adicionales sobre una factura **emitida** (no un borrador ni una anulada, y nunca sobre una nota de crédito). Cuerpo: establecimiento y punto de emisión (el establecimiento debe ser el de la factura), de 1 a 20 `motives` (`reason` ≤ 300 caracteres, `amount` con hasta dos decimales, `taxRateId` de una tarifa de IVA) y `paymentMethodCode` opcional. Cada motivo se guarda como una línea de cantidad 1 con su impuesto; la numeración es la serie propia del tipo 05. Emite `billing.invoice.issued` con `documentTypeCode: '05'`, `relatedInvoiceId` y `relatedIssueDate`; fiscal-ecuador la firma con el XML de nota de débito (los motivos van como `motivos`, no como detalle). Reutiliza `issueInvoiceInTransaction`. Requiere el tipo de documento `05` en el catálogo fiscal.

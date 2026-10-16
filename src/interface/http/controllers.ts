@@ -9,6 +9,7 @@ import { IssueInvoiceUseCase } from '../../application/use-cases/issue-invoice.j
 import { IngestPosSaleUseCase } from '../../application/use-cases/ingest-pos-sale.js';
 import type { IngestPosSaleInput } from '../../application/dts.js';
 import { IssueCreditNoteUseCase } from '../../application/use-cases/issue-credit-note.js';
+import { IssueDebitNoteUseCase } from '../../application/use-cases/issue-debit-note.js';
 import { VoidInvoiceUseCase } from '../../application/use-cases/void-invoice.js';
 import { ContextVariables } from './middlewares.js';
 
@@ -144,6 +145,25 @@ export function voidInvoiceController(useCase: VoidInvoiceUseCase) {
     const body = c.req.valid('json' as never) as { reason: string };
     const result = await useCase.execute(organizationId, invoiceId, {
       reason: body.reason,
+      userId: c.get('userId'),
+    });
+    return c.json(result, 200);
+  };
+}
+
+export function issueDebitNoteController(useCase: IssueDebitNoteUseCase) {
+  return async (c: Context<{ Variables: ContextVariables }>) => {
+    const body = c.req.valid('json' as never) as {
+      establishmentId: string;
+      emissionPointId: string;
+      motives: { reason: string; amount: string; taxRateId: string }[];
+      paymentMethodCode?: string | null;
+    };
+    const result = await useCase.execute(c.get('organizationId'), c.req.param('id') ?? '', {
+      establishmentId: body.establishmentId,
+      emissionPointId: body.emissionPointId,
+      motives: body.motives,
+      paymentMethodCode: body.paymentMethodCode ?? null,
       userId: c.get('userId'),
     });
     return c.json(result, 200);

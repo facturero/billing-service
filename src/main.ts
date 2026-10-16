@@ -18,6 +18,7 @@ import { RemoveLineUseCase } from './application/use-cases/remove-line.js';
 import { IssueInvoiceUseCase } from './application/use-cases/issue-invoice.js';
 import { IngestPosSaleUseCase } from './application/use-cases/ingest-pos-sale.js';
 import { IssueCreditNoteUseCase } from './application/use-cases/issue-credit-note.js';
+import { IssueDebitNoteUseCase } from './application/use-cases/issue-debit-note.js';
 import { VoidInvoiceUseCase } from './application/use-cases/void-invoice.js';
 import { createApp } from './interface/http/app.js';
 import { OutboxRelay } from '@facturero/outbox-relay';
@@ -61,6 +62,7 @@ async function main(): Promise<void> {
       removeLine: new RemoveLineUseCase(uow),
       issueInvoice: new IssueInvoiceUseCase(uow, organizationCatalog, customerCatalog, documentTypeCatalog),
       issueCreditNote: new IssueCreditNoteUseCase(uow, organizationCatalog, customerCatalog, documentTypeCatalog),
+      issueDebitNote: new IssueDebitNoteUseCase(uow, organizationCatalog, customerCatalog, documentTypeCatalog, taxRateCatalog),
       ingestPosSale: new IngestPosSaleUseCase(uow, organizationCatalog, customerCatalog, documentTypeCatalog, productCatalog, taxRateCatalog),
       voidInvoice: new VoidInvoiceUseCase(uow),
     },

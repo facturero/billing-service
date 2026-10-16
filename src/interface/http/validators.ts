@@ -32,6 +32,23 @@ export const creditNoteSchema = z.object({
   reason: z.string().min(1).max(300),
 });
 
+// Nota de débito: no clona la factura; añade motivos (razón + valor sin impuestos + IVA que lo grava).
+export const debitNoteSchema = z.object({
+  establishmentId: z.string().uuid(),
+  emissionPointId: z.string().uuid(),
+  motives: z
+    .array(
+      z.object({
+        reason: z.string().min(1).max(300),
+        amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'El valor debe ser un importe con hasta dos decimales (p. ej. 10.00)'),
+        taxRateId: z.string().uuid(),
+      }),
+    )
+    .min(1)
+    .max(20),
+  paymentMethodCode: z.string().regex(/^\d{2}$/).nullable().optional(),
+});
+
 // Ingesta de una venta del POS. `posSaleId` es el id de la venta en la base
 // local del terminal (Prisma lo genera como entero autoincremental), por eso
 // es texto libre y no un uuid.

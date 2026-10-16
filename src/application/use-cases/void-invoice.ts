@@ -26,6 +26,8 @@ export class VoidInvoiceUseCase {
           invoiceId: invoice.id,
           number: invoice.number,
           organizationId: invoice.organizationId,
+          // accounting-service distingue con ella una factura anterior a su contabilidad de una cuyo asiento aún no se creó.
+          issueDate: invoice.issueDate?.toISOString() ?? null,
           reason: input.reason,
           voidedAt: invoice.voidedAt,
           // Ver issue-invoice: sin userId el gateway no tiene sala a la que emitir.

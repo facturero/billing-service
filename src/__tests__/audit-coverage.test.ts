@@ -19,6 +19,8 @@ const EXENTOS: Record<string, string> = {
     'delega en issueInvoiceInTransaction, que publica billing.invoice.created/issued',
   'issue-credit-note':
     'delega en issueInvoiceInTransaction, que publica billing.invoice.created/issued',
+  'issue-debit-note':
+    'delega en issueInvoiceInTransaction, que publica billing.invoice.issued',
   'add-line-in-transaction':
     'auxiliar de add-line/create-invoice, que publican billing.invoice.line_added/created',
   'recompute-tax-totals':

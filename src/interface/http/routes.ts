@@ -8,6 +8,7 @@ import { RemoveLineUseCase } from '../../application/use-cases/remove-line.js';
 import { IssueInvoiceUseCase } from '../../application/use-cases/issue-invoice.js';
 import { IngestPosSaleUseCase } from '../../application/use-cases/ingest-pos-sale.js';
 import { IssueCreditNoteUseCase } from '../../application/use-cases/issue-credit-note.js';
+import { IssueDebitNoteUseCase } from '../../application/use-cases/issue-debit-note.js';
 import { VoidInvoiceUseCase } from '../../application/use-cases/void-invoice.js';
 import {
   createInvoiceController,
@@ -19,6 +20,7 @@ import {
   issueInvoiceController,
   ingestPosSaleController,
   issueCreditNoteController,
+  issueDebitNoteController,
   voidInvoiceController,
 } from './controllers.js';
 import {
@@ -28,6 +30,7 @@ import {
   issueInvoiceSchema,
   ingestPosSaleSchema,
   creditNoteSchema,
+  debitNoteSchema,
   voidInvoiceSchema,
   validateJson,
 } from './validators.js';
@@ -46,6 +49,7 @@ export interface AppDependencies {
     issueInvoice: IssueInvoiceUseCase;
     ingestPosSale: IngestPosSaleUseCase;
     issueCreditNote: IssueCreditNoteUseCase;
+    issueDebitNote: IssueDebitNoteUseCase;
     voidInvoice: VoidInvoiceUseCase;
   };
   corsOrigin: string;
@@ -120,6 +124,12 @@ export function invoiceRoutes(deps: AppDependencies): Hono<Vars> {
     requirePermission('invoice:issue'),
     validateJson(creditNoteSchema),
     issueCreditNoteController(useCases.issueCreditNote));
+
+  r.post('/invoices/:id/debit-note',
+    requireOrganization(),
+    requirePermission('invoice:issue'),
+    validateJson(debitNoteSchema),
+    issueDebitNoteController(useCases.issueDebitNote));
 
   return r;
 }
