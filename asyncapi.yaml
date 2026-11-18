@@ -30,8 +30,41 @@ channels:
           properties:
             invoiceId:
               type: string
+            customerId:
+              type: string
+              description: Cliente de la factura; tesorería abre la partida de cartera por este id.
             number:
               type: string
+            sequentialNumber:
+              type: string
+            issueDate:
+              type: string
+              format: date-time
+              nullable: true
+            documentTypeCode:
+              type: string
+              description: Código SRI del comprobante (01 factura, 04 nota de crédito…).
+            relatedInvoiceId:
+              type: string
+              nullable: true
+              description: Factura original cuando el comprobante es una nota de crédito/débito.
+            relatedIssueDate:
+              type: string
+              format: date-time
+              nullable: true
+            creditNoteReason:
+              type: string
+              nullable: true
+            posSaleId:
+              type: string
+              nullable: true
+              description: Si viene, la venta se cobró en el POS y no genera cuenta por cobrar.
+            paymentMethodCode:
+              type: string
+              nullable: true
+            userId:
+              type: string
+              description: Usuario que emitió (para la campana); se omite si no vino en X-User-Id.
             organizationId:
               type: string
             countryCode:
@@ -96,6 +129,12 @@ channels:
               type: string
             number:
               type: string
+            organizationId:
+              type: string
+            issueDate:
+              type: string
+              format: date-time
+              nullable: true
             reason:
               type: string
             voidedAt:

@@ -165,6 +165,9 @@ export async function issueInvoiceInTransaction(
     aggregateId: invoice.id,
     payload: {
       invoiceId: invoice.id,
+      // Identidad del cliente (el snapshot trae sus datos para el XML; el id
+      // suelto es lo que tesorería usa para abrir/cerrar la partida de cartera).
+      customerId: invoice.customerId,
       number: invoice.number,
       sequentialNumber: seqFormatted,
       // Fecha legal del comprobante. fiscal-ecuador la usa en fechaEmision y
@@ -178,6 +181,12 @@ export async function issueInvoiceInTransaction(
       countryCode: invoice.countryCode,
       // Tipo SRI del comprobante: fiscal arma factura (01) o nota de crédito (04).
       documentTypeCode,
+      // Factura original de una nota de crédito/de débito. Va siempre (null si
+      // no aplica) para que el consumidor no dependa de que la clave exista.
+      relatedInvoiceId: invoice.relatedInvoiceId,
+      // Venta de POS ya cobrada: tesorería NO le abre partida de cartera
+      // (el dinero entró en la caja, no es una cuenta por cobrar).
+      posSaleId: invoice.posSaleId,
       ...(ncRef ?? {}),
       establishmentId: invoice.establishmentId,
       emissionPointId: invoice.emissionPointId,

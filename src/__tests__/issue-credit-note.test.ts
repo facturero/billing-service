@@ -277,6 +277,6 @@ describe('IssueCreditNoteUseCase', () => {
     expect(result.status).toBe('issued');
     const issuedEvent = (repos.business.outbox.add as any).mock.calls[0][0];
     expect(issuedEvent.payload.documentTypeCode).toBe('01');
-    expect(issuedEvent.payload.relatedInvoiceId).toBeUndefined();
+    expect(issuedEvent.payload.relatedInvoiceId).toBeNull();
   });
 });

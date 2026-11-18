@@ -120,7 +120,12 @@ describe('IssueInvoiceUseCase', () => {
     const issuedEvent = (repos.business.outbox.add as any).mock.calls[0][0];
     expect(issuedEvent.type).toBe('billing.invoice.issued');
     expect(issuedEvent.payload.documentTypeCode).toBe('01');
-    expect(issuedEvent.payload.relatedInvoiceId).toBeUndefined();
+    expect(issuedEvent.payload.customerId).toBe('cust-1');
+    expect(issuedEvent.payload.issueDate).not.toBeNull();
+    // Tesorería usa posSaleId para no abrir cartera y relatedInvoiceId para
+    // colgar la nota de crédito de su factura; van siempre (null si no aplican).
+    expect(issuedEvent.payload.posSaleId).toBeNull();
+    expect(issuedEvent.payload.relatedInvoiceId).toBeNull();
   });
 
   it('auto-provisions a new Sequence when none exists', async () => {

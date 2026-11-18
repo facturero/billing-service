@@ -138,6 +138,12 @@ describe('IngestPosSaleUseCase', () => {
     expect(invoice.subtotalCents).toBe(178);
     expect(invoice.totalCents).toBe(199);
     expect(repos.business.outbox.add).toHaveBeenCalled();
+    // La venta de POS viaja con su posSaleId: tesorería la lee para NO abrirle
+    // cuenta por cobrar (el dinero ya entró en la caja).
+    const issued = (repos.business.outbox.add as ReturnType<typeof vi.fn>).mock.calls
+      .map((c) => c[0])
+      .find((e) => e.type === 'billing.invoice.issued');
+    expect(issued.payload.posSaleId).toBe('412');
   });
 
   describe('forma de pago', () => {
