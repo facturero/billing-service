@@ -2,19 +2,19 @@ import { z } from 'zod';
 import { zValidator } from '@hono/zod-validator';
 
 export const createInvoiceSchema = z.object({
-  customerId: z.string().uuid(),
-  documentTypeId: z.string().uuid(),
+  customerId: z.string().guid(),
+  documentTypeId: z.string().guid(),
   currencyCode: z.string().length(3).default('USD'),
 });
 
 export const updateInvoiceSchema = z.object({
-  customerId: z.string().uuid().optional(),
-  documentTypeId: z.string().uuid().optional(),
+  customerId: z.string().guid().optional(),
+  documentTypeId: z.string().guid().optional(),
   currencyCode: z.string().length(3).optional(),
 }).optional();
 
 export const addLineSchema = z.object({
-  productId: z.string().uuid(),
+  productId: z.string().guid(),
   description: z.string().min(1).max(255),
   quantity: z.number().positive(),
   unitPrice: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Precio inválido'),
@@ -22,26 +22,26 @@ export const addLineSchema = z.object({
 });
 
 export const issueInvoiceSchema = z.object({
-  establishmentId: z.string().uuid(),
-  emissionPointId: z.string().uuid(),
+  establishmentId: z.string().guid(),
+  emissionPointId: z.string().guid(),
 });
 
 export const creditNoteSchema = z.object({
-  establishmentId: z.string().uuid(),
-  emissionPointId: z.string().uuid(),
+  establishmentId: z.string().guid(),
+  emissionPointId: z.string().guid(),
   reason: z.string().min(1).max(300),
 });
 
 // Nota de débito: no clona la factura; añade motivos (razón + valor sin impuestos + IVA que lo grava).
 export const debitNoteSchema = z.object({
-  establishmentId: z.string().uuid(),
-  emissionPointId: z.string().uuid(),
+  establishmentId: z.string().guid(),
+  emissionPointId: z.string().guid(),
   motives: z
     .array(
       z.object({
         reason: z.string().min(1).max(300),
         amount: z.string().regex(/^\d+(\.\d{1,2})?$/, 'El valor debe ser un importe con hasta dos decimales (p. ej. 10.00)'),
-        taxRateId: z.string().uuid(),
+        taxRateId: z.string().guid(),
       }),
     )
     .min(1)
@@ -55,16 +55,16 @@ export const debitNoteSchema = z.object({
 export const ingestPosSaleSchema = z.object({
   terminalId: z.string().min(1).max(64),
   posSaleId: z.string().min(1).max(64),
-  establishmentId: z.string().uuid(),
-  emissionPointId: z.string().uuid(),
-  customerId: z.string().uuid().nullable().optional(),
+  establishmentId: z.string().guid(),
+  emissionPointId: z.string().guid(),
+  customerId: z.string().guid().nullable().optional(),
   // Tabla 24 del SRI: 01 sin utilización del sistema financiero (efectivo), 15 compensación de deudas, 16 débito, 17 dinero
   // electrónico, 18 prepago, 19 crédito, 20 otros con utilización del sistema financiero, 21 endoso de títulos.
   paymentMethodCode: z.enum(['01', '15', '16', '17', '18', '19', '20', '21']).optional(),
   currencyCode: z.string().length(3).optional(),
   posTotalCents: z.number().int().optional(),
   lines: z.array(z.object({
-    productId: z.string().uuid(),
+    productId: z.string().guid(),
     description: z.string().max(255).optional(),
     quantity: z.number().positive(),
     unitPrice: z.string().regex(/^\d+(\.\d{1,2})?$/, 'Precio inválido'),
@@ -78,7 +78,7 @@ export const voidInvoiceSchema = z.object({
 
 export const listInvoicesQuerySchema = z.object({
   status: z.enum(['draft', 'issued', 'voided']).optional(),
-  customerId: z.string().uuid().optional(),
+  customerId: z.string().guid().optional(),
   from: z.string().optional(),
   to: z.string().optional(),
 });
